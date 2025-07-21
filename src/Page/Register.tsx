@@ -27,9 +27,12 @@ export default function Register() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
         <div className="text-center mb-6">
-          <div className="flex justify-center mb-4">
-            {/* <BookOpen className="h-12 w-12 text-blue-600" /> */}
-            <img src="../.." alt="" />
+          <div className="flex justify-center mb-3">
+            <img
+              src="/images/logo.png"
+              alt="logo"
+              className="inline-block w-20 h-20"
+            />
           </div>
           <h2 className="text-2xl font-bold">Đăng ký</h2>
           <p className="text-gray-700">Tạo tài khoản mới để sử dụng hệ thống</p>
