@@ -242,3 +242,77 @@ Mục tiêu: Tăng cường tính cộng tác, quản lý và giao tiếp trong 
 **Story Points**: 3
 
 ---
+
+# ✅ User Stories – Giai đoạn 1 (Tiếp theo: Chức năng cho Admin)
+
+### 👑 User Story #14: Admin quản lý người dùng
+
+**User Story**: Là admin, tôi muốn xem, tìm kiếm và quản lý danh sách tài khoản người dùng để đảm bảo hệ thống hoạt động ổn định.
+
+**Acceptance Criteria**:
+
+ * [ ] Hiển thị danh sách người dùng (học sinh, giáo viên)
+ * [ ] Tìm kiếm theo tên, email, vai trò
+ * [ ] Khoá/mở tài khoản người dùng
+ * [ ] Xem thông tin chi tiết tài khoản
+
+**Priority**: High
+
+**Story Points**: 5
+
+---
+
+
+### ⚙️ User Story #15: Admin phân quyền người dùng
+
+**User Story**: Là admin, tôi muốn thay đổi vai trò tài khoản (VD: từ học sinh sang giáo viên) để cập nhật đúng quyền sử dụng.
+
+**Acceptance Criteria**:
+
+ * [ ] Chọn người dùng từ danh sách
+
+ * [ ] Thay đổi vai trò (Học sinh <-> Giáo viên)
+
+ * [ ] Ghi lại lịch sử thay đổi vai trò
+
+**Priority**: Medium
+
+**Story Points**: 3
+
+---
+
+### 📊 User Story #16: Admin theo dõi thống kê hệ thống
+
+**User Story**: Là admin, tôi muốn xem thống kê tổng quan hệ thống để theo dõi số lượng người dùng, lớp học, bài tập, hoạt động.
+
+**Acceptance Criteria**:
+
+ * [ ] Biểu đồ số lượng người dùng theo vai trò
+
+ * [ ] Số lượng lớp học và bài tập đang hoạt động
+
+ * [ ] Biểu đồ tăng trưởng người dùng theo thời gian
+
+**Priority**: Medium
+
+**Story Points**: 5
+
+---
+
+### 🚨 User Story #18: Admin giám sát hoạt động hệ thống
+
+**User Story**: Là admin, tôi muốn theo dõi nhật ký hoạt động của người dùng để đảm bảo an toàn và phát hiện hành vi bất thường.
+
+**Acceptance Criteria**:
+
+ * [ ] Ghi log: đăng nhập, tạo lớp, nộp bài, chấm điểm,...
+
+ * [ ] Hiển thị log theo ngày, người dùng
+
+ * [ ] Tìm kiếm và lọc theo hành động cụ thể
+
+**Priority**: Medium
+
+**Story Points**: 5
+
+---
