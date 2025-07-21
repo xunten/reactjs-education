@@ -1,5 +1,4 @@
-// src/components/Header.tsx
-import React from 'react';
+
 import {
   HomeOutlined,
   AppstoreOutlined,
@@ -13,7 +12,7 @@ import { Dropdown, Avatar, Space } from 'antd';
 
 const menuItems = [
   { key: 'home', label: 'Trang chủ', icon: <HomeOutlined /> },
-  { key: 'class', label: 'Quản lý lớp', icon: <AppstoreOutlined /> },
+  { key: 'classes', label: 'Quản lý lớp', icon: <AppstoreOutlined /> },
   { key: 'exam', label: 'Quản lý đề thi', icon: <FileTextOutlined /> },
   { key: 'teacher', label: 'Quản lý giáo viên', icon: <TeamOutlined /> },
 ];
