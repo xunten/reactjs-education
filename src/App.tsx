@@ -1,15 +1,15 @@
 
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./App.css";
-import Login from "./Page/Login";
-import Register from "./Page/Register";
-import Home from "./Page/Home";
-import ClassesPage from "./Page/Class";
+import Login from "./modules/client/pages/Login"; 
+import Register from "./modules/client/pages/Register";
+import Home from "./modules/client/pages/Home";
+import ClassesPage from "./modules/client/pages/Class";
 import Layout from "./MainLayout";
-import ExamLayout from "./layout/ExamLayout";
-import CreateExam from "./Page/CreateExam";
-import ExamDetail from "./Page/ExamDetail";
-import Exam from "./Page/Exam";
+import ExamLayout from "./layouts/ExamLayout";
+import CreateExam from "./modules/client/pages/CreateExam";
+import ExamDetail from "./modules/client/pages/ExamDetail";
+import Exam from "./modules/client/pages/Exam";
 
 
 function App() {
