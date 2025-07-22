@@ -1,5 +1,5 @@
-import React from 'react';
-import { Upload, Button, Card, Space, Typography } from 'antd';
+
+import { Upload, Button, Card, Space, Typography, message } from 'antd';
 import {
   UploadOutlined,
   EditOutlined,
@@ -17,6 +17,7 @@ const uploadProps = {
   name: 'file',
   multiple: true,
   action: '/api/upload',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange(info: any) {
     const { status } = info.file;
     if (status !== 'uploading') {
