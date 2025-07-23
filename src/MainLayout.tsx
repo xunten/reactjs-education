@@ -1,6 +1,6 @@
 // src/Layout.tsx
 import { Outlet } from 'react-router';
-import Header from './layout/Header';
+import Header from './layouts/Header';
 
 const Layout = () => {
   return (

@@ -5,12 +5,12 @@ import * as yup from "yup";
 import { Eye, EyeOff } from "lucide-react";
 
 const schema = yup.object().shape({
-  email: yup.string().email("Email không hợp lệ").required("Email là bắt buộc"),
+  email: yup.string().email("Invalid email").required("Email is required"),
   password: yup
     .string()
-    .min(8, "Mật khẩu phải từ 8 ký tự")
-    .required("Mật khẩu là bắt buộc"),
-  role: yup.string().required("Vui lòng chọn vai trò"),
+    .min(8, "Password must be at least 8 characters")
+    .required("Password is required"),
+  role: yup.string().required("Please select a role"),
 });
 
 export default function LoginForm() {
@@ -26,8 +26,8 @@ export default function LoginForm() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = (data: any) => {
-    console.log("Dữ liệu đăng nhập:", data);
-    // Xử lý đăng nhập ở đây
+    console.log("Login data:", data);
+    // Handle login here
   };
 
   return (
@@ -41,9 +41,9 @@ export default function LoginForm() {
               className="inline-block w-20 h-20"
             />
           </div>
-          <h2 className="text-2xl font-bold">Đăng nhập</h2>
+          <h2 className="text-2xl font-bold">Login</h2>
           <p className="text-gray-500 text-base">
-            Đăng nhập vào hệ thống quản lý học tập
+            Sign in to the learning management system
           </p>
         </div>
 
@@ -52,9 +52,9 @@ export default function LoginForm() {
             <label className="font-medium block mb-1">Email</label>
             <input
               type="email"
-              placeholder="Nhập email của bạn"
+              placeholder="Enter your email"
               {...register("email")}
-              className="w-full px-4 py-2 border border-blue-200 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-green-200 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-green-500"
             />
             {errors.email && (
               <p className="text-red-500 text-sm mt-1">
@@ -64,13 +64,13 @@ export default function LoginForm() {
           </div>
 
           <div>
-            <label className="font-medium block mb-1">Mật khẩu</label>
+            <label className="font-medium block mb-1">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Nhập mật khẩu"
+                placeholder="Enter your password"
                 {...register("password")}
-                className="w-full px-4 py-2 border border-blue-200 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-green-200 rounded-md text-base focus:outline-none focus:ring-1 focus:ring-green-500"
               />
               <button
                 type="button"
@@ -92,15 +92,15 @@ export default function LoginForm() {
           </div>
 
           <div>
-            <label className="font-medium block mb-1">Vai trò</label>
+            <label className="font-medium block mb-1">Role</label>
             <select
               {...register("role")}
-              className="w-full px-4 py-2 border  border-blue-200 rounded-md bg-gray-100 text-base focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-green-200 rounded-md bg-gray-100 text-base focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="">Chọn vai trò của bạn</option>
-              <option value="student">Học sinh</option>
-              <option value="teacher">Giáo viên</option>
-              <option value="admin">Quản trị viên</option>
+              <option value="">Select your role</option>
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+              <option value="admin">Administrator</option>
             </select>
             {errors.role && (
               <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
@@ -109,16 +109,16 @@ export default function LoginForm() {
 
           <button
             type="submit"
-            className="w-full py-2 bg-blue-600 text-white rounded-md font-semibold text-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            className="w-full py-2 bg-green-600 text-white rounded-md font-semibold text-lg hover:bg-green-700 transition-colors cursor-pointer"
           >
-            Đăng nhập
+            Log In
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          Chưa có tài khoản?{" "}
-          <a href="/register" className="text-blue-600 underline">
-            Đăng ký ngay
+          Don't have an account?{" "}
+          <a href="/register" className="text-green-600 underline">
+            Register now
           </a>
         </div>
       </div>
