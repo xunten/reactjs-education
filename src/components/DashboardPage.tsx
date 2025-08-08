@@ -169,7 +169,7 @@ const DashboardPage: React.FC = () => {
                                         return `${name}: ${percentageValue}%`;
                                     }}
                                 >
-                                    {userRolesData.map((entry, index) => (
+                                    {userRolesData.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
@@ -209,7 +209,7 @@ const DashboardPage: React.FC = () => {
                                         return `${name}: ${percentageValue}%`;
                                     }}
                                 >
-                                    {attendanceStatusData.map((entry, index) => (
+                                    {attendanceStatusData.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
