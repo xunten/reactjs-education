@@ -1,37 +1,56 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import AppLayout from './components/AppLayout';
+import DashboardPage from './components/DashboardPage';
+import UserManagementPage from './components/UserManagementPage';
+import ClassManagementPage from './components/ClassManagementPage';
+import AssignmentManagementPage from './components/AssignmentManagementPage';
+import SubmissionManagementPage from './components/SubmissionManagementPage';
+import QuizManagementPage from './components/QuizManagementPage';
+import AttendanceManagementPage from './components/AttendanceManagementPage';
+import ActivityLogPage from './components/ActivityLogPage';
+import SchedulePage from './components/SchedulePage';
+import ProfilePage from './components/ProfilePage';
+import MaterialsPage from './components/MaterialsPage'; // New import
+import { ThemeProvider } from './components/ThemeContext';
+import 'antd/dist/reset.css';
 
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import "./App.css";
-import Login from "./modules/client/pages/Login"; 
-import Register from "./modules/client/pages/Register";
-import Home from "./modules/client/pages/Home";
-import ClassesPage from "./modules/client/pages/Class";
-import Layout from "./MainLayout";
-import ExamLayout from "./layouts/ExamLayout";
-import CreateExam from "./modules/client/pages/CreateExam";
-import ExamDetail from "./modules/client/pages/ExamDetail";
-import Exam from "./modules/client/pages/Exam";
+const mockUser = {
+  isLoggedIn: true,
+  role: 'admin'
+};
 
+const App: React.FC = () => {
+  // Logic kiểm tra quyền truy cập
+  const isAuthenticated = mockUser.isLoggedIn && mockUser.role === 'admin';
 
-function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}> 
-          <Route path="/" element={<Home />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/exam" element={<ExamLayout />}>
-            <Route index element={<Exam />} />
-            <Route path="create" element={<CreateExam />} />
-            <Route path=":id" element={<ExamDetail />} />
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<div>Trang Đăng nhập</div>} />
+          
+          {/* Các Route được bảo vệ */}
+          <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/classes" element={<ClassManagementPage />} />
+            <Route path="/assignments" element={<AssignmentManagementPage />} />
+            <Route path="/submissions" element={<SubmissionManagementPage />} />
+            <Route path="/quizzes" element={<QuizManagementPage />} />
+            <Route path="/materials" element={<MaterialsPage />} />
+            <Route path="/attendance" element={<AttendanceManagementPage />} />
+            <Route path="/users" element={<UserManagementPage />} />
+            <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/logs" element={<ActivityLogPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
-          <Route path="/class" element={<ClassesPage />} />
-        </Route>
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Trang Đăng xuất (không cần bảo vệ) */}
+          <Route path="/logout" element={<div>Trang Đăng xuất</div>} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
-}
+};
 
 export default App;
