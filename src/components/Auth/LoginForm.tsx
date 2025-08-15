@@ -1,10 +1,13 @@
-import React from 'react';
-import { Form, Input, Button } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import type { Credentials } from '../../types/Auth';
+import React from "react";
+import { Form, Input, Button } from "antd";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
+interface LoginFormValues {
+  usernameOrEmail: string;
+  password: string;
+}
 
 interface LoginFormProps {
-  onLogin: (values: Credentials) => void;
+  onLogin: (values: LoginFormValues) => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
@@ -16,22 +19,23 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       requiredMark={false}
     >
       <Form.Item
-        name="username"
-        label="Tên đăng nhập"
-        rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
+        name="usernameOrEmail"
+        label="Tên đăng nhập hoặc email"
+        rules={[
+          { required: true, message: "Vui lòng nhập tên đăng nhập hoặc email" },
+        ]}
       >
         <Input
           prefix={<UserOutlined className="text-gray-400" />}
-          placeholder="Nhập tên đăng nhập"
+          placeholder="Nhập tên đăng nhập hoặc email"
           autoComplete="username"
           size="large"
         />
       </Form.Item>
-
       <Form.Item
         name="password"
         label="Mật khẩu"
-        rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
+        rules={[{ required: true, message: "Vui lòng nhập mật khẩu" }]}
       >
         <Input.Password
           prefix={<LockOutlined className="text-gray-400" />}

@@ -1,5 +1,6 @@
 export interface Credentials {
-  username: string;
+  username?: string;
+  email?: string;
   password: string;
 }
 
@@ -9,6 +10,7 @@ export interface AuthResponse {
     id: number;
     username: string;
     fullName: string;
+    email: string;
     roles: string[];
   };
 }
