@@ -1,54 +1,81 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import AppLayout from './components/AppLayout';
-import DashboardPage from './components/DashboardPage';
-import UserManagementPage from './components/UserManagementPage';
-import ClassManagementPage from './components/ClassManagementPage';
-import AssignmentManagementPage from './components/AssignmentManagementPage';
-import SubmissionManagementPage from './components/SubmissionManagementPage';
-import QuizManagementPage from './components/QuizManagementPage';
-import AttendanceManagementPage from './components/AttendanceManagementPage';
-import ActivityLogPage from './components/ActivityLogPage';
-import SchedulePage from './components/SchedulePage';
-import ProfilePage from './components/ProfilePage';
-import MaterialsPage from './components/MaterialsPage'; // New import
+import MainLayout from './components/Layout/MainLayout';
+import DashboardPage from './pages/DashboardPage';
+import UserManagementPage from './pages/UserManagementPage';
+import ClassManagementPage from './pages/ClassManagementPage';
+import AssignmentManagementPage from './pages/AssignmentManagementPage';
+import SubmissionManagementPage from './pages/SubmissionManagementPage';
+import QuizManagementPage from './pages/QuizManagementPage';
+import AttendanceManagementPage from './pages/AttendanceManagementPage';
+import ActivityLogPage from './pages/ActivityLogPage';
+import SchedulePage from './pages/SchedulePage';
+import ProfilePage from './pages/ProfilePage';
+import MaterialsPage from './pages/MaterialsPage';
 import { ThemeProvider } from './components/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import 'antd/dist/reset.css';
+import { App as AntdApp } from 'antd';
+import LoginPage from './pages/LoginPage';
 
-const mockUser = {
-  isLoggedIn: true,
-  role: 'admin'
+interface ProtectedRouteProps {
+  allowedRoles?: string[];
+}
+
+// Component để bảo vệ các route theo quyền
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles = [] }) => {
+  const { isLoggedIn, user } = useAuth();
+  const userRole = user?.role;
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" />;
+  }
+
+  if (allowedRoles.length > 0 && (!userRole || !allowedRoles.includes(userRole))) {
+    return <Navigate to="/unauthorized" />;
+  }
+
+  return <MainLayout />;
+};
+
+const AppRoutes: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/unauthorized" element={<div>Bạn không có quyền truy cập trang này.</div>} />
+        
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} /> 
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/classes" element={<ClassManagementPage />} />
+          <Route path="/assignments" element={<AssignmentManagementPage />} />
+          <Route path="/submissions" element={<SubmissionManagementPage />} />
+          <Route path="/quizzes" element={<QuizManagementPage />} />
+          <Route path="/materials" element={<MaterialsPage />} />
+          <Route path="/attendance" element={<AttendanceManagementPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
+          <Route path="/logs" element={<ActivityLogPage />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/users" element={<UserManagementPage />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
 };
 
 const App: React.FC = () => {
-  // Logic kiểm tra quyền truy cập
-  const isAuthenticated = mockUser.isLoggedIn && mockUser.role === 'admin';
-
   return (
     <ThemeProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<div>Trang Đăng nhập</div>} />
-          
-          {/* Các Route được bảo vệ */}
-          <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/classes" element={<ClassManagementPage />} />
-            <Route path="/assignments" element={<AssignmentManagementPage />} />
-            <Route path="/submissions" element={<SubmissionManagementPage />} />
-            <Route path="/quizzes" element={<QuizManagementPage />} />
-            <Route path="/materials" element={<MaterialsPage />} />
-            <Route path="/attendance" element={<AttendanceManagementPage />} />
-            <Route path="/users" element={<UserManagementPage />} />
-            <Route path="/schedule" element={<SchedulePage />} />
-            <Route path="/logs" element={<ActivityLogPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Route>
-
-          {/* Trang Đăng xuất (không cần bảo vệ) */}
-          <Route path="/logout" element={<div>Trang Đăng xuất</div>} />
-        </Routes>
-      </Router>
+      <AuthProvider>
+        {/* <-- QUAN TRỌNG: Bao bọc AppRoutes bên trong Antd.App */}
+        <AntdApp>
+          <AppRoutes />
+        </AntdApp>
+      </AuthProvider>
     </ThemeProvider>
   );
 };

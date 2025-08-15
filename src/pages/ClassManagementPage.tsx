@@ -12,32 +12,67 @@ import {
   InputNumber,
   Select,
   message,
+  Spin, 
+  Alert,
 } from 'antd';
 import { MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Class } from '../types';
+import { useClasses } from '../hooks/useClasses';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const initialClasses: Class[] = [
-  { id: 1, className: 'Math 101', schoolYear: 2023, semester: 'Học kỳ 1', teacherId: 2, teacherName: 'Mr. Smith' },
-  { id: 2, className: 'Lớp 12A1', schoolYear: 2025, semester: 'Học kỳ 1', teacherId: 2, teacherName: 'Ms. Alice' },
-];
-
 const ClassManagementPage: React.FC = () => {
   const [form] = Form.useForm();
-  const [classes, setClasses] = useState<Class[]>(initialClasses);
+  const { 
+    classes, 
+    isLoading, 
+    error, 
+    createClass, 
+    updateClass, 
+    deleteClass,
+    isCreating,
+    isUpdating,
+    isDeleting,
+  } = useClasses(); // Sử dụng hook useClasses
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
+
+  // Hiển thị trạng thái loading/error khi fetch dữ liệu ban đầu
+  if (isLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 50 }}>
+        <Spin size="large" tip="Đang tải danh sách lớp học..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert
+          message="Lỗi tải dữ liệu"
+          description={`Không thể tải danh sách lớp học: ${(error as Error).message}`}
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
 
   const showModal = (record?: Class) => {
     setEditingClass(record || null);
     setIsModalVisible(true);
     if (record) {
-      form.setFieldsValue(record);
+      // Đối với năm học, đảm bảo nó là number
+      form.setFieldsValue({ ...record, schoolYear: Number(record.schoolYear) });
     } else {
       form.resetFields();
+      // Đặt giá trị mặc định cho năm học là năm hiện tại khi thêm mới
+      form.setFieldsValue({ schoolYear: dayjs().year() });
     }
   };
 
@@ -47,19 +82,22 @@ const ClassManagementPage: React.FC = () => {
     form.resetFields();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleFinish = (values: any) => {
-    if (editingClass) {
-      setClasses(classes.map(cls => cls.id === editingClass.id ? { ...cls, ...values } : cls));
-      message.success('Cập nhật lớp học thành công');
-    } else {
-      const newClass = { ...values, id: Date.now() };
-      setClasses([...classes, newClass]);
-      message.success('Thêm lớp học thành công');
+  const handleFinish = async (values: Class) => {
+    try {
+      if (editingClass) {
+        // Cập nhật lớp học
+        await updateClass({ ...editingClass, ...values });
+        message.success('Cập nhật lớp học thành công');
+      } else {
+        // Thêm lớp học mới (bỏ qua ID vì backend sẽ tạo)
+        await createClass(values); // values sẽ là ClassCreateDTO
+        message.success('Thêm lớp học thành công');
+      }
+      handleCancel(); // Đóng modal và reset form
+    } catch (err) {
+      console.error('Lỗi khi lưu lớp học:', err);
+      message.error('Có lỗi xảy ra khi lưu lớp học.');
     }
-    setIsModalVisible(false);
-    setEditingClass(null);
-    form.resetFields();
   };
 
   const handleDelete = (record: Class) => {
@@ -69,30 +107,40 @@ const ClassManagementPage: React.FC = () => {
       okText: 'Xóa',
       okType: 'danger',
       cancelText: 'Hủy',
-      onOk: () => {
-        setClasses(classes.filter(cls => cls.id !== record.id));
-        message.success('Đã xóa lớp học');
-      }
+      onOk: async () => {
+        try {
+          if (record.id) { // Đảm bảo có ID để xóa
+            await deleteClass(record.id);
+            message.success('Đã xóa lớp học');
+          } else {
+            message.error('Không tìm thấy ID lớp học để xóa.');
+          }
+        } catch (err) {
+          console.error('Lỗi khi xóa lớp học:', err);
+          message.error('Có lỗi xảy ra khi xóa lớp học.');
+        }
+      },
     });
   };
 
   const columns: ColumnsType<Class> = [
+    { title: 'ID', dataIndex: 'id', key: 'id' }, // Hiển thị ID cho quản lý
     { title: 'Tên lớp', dataIndex: 'className', key: 'className' },
     { title: 'Năm học', dataIndex: 'schoolYear', key: 'schoolYear' },
     { title: 'Học kỳ', dataIndex: 'semester', key: 'semester' },
     { title: 'Giáo viên', dataIndex: 'teacherName', key: 'teacherName' },
     {
-      title: '',
+      title: 'Hành động',
       key: 'actions',
       render: (_, record) => (
         <Dropdown
           trigger={['click']}
           overlay={
             <Menu>
-              <Menu.Item onClick={() => showModal(record)}>Chỉnh sửa</Menu.Item>
-              <Menu.Item onClick={() => handleDelete(record)}>Xóa</Menu.Item>
-              <Menu.Item>Danh sách học sinh</Menu.Item>
-              <Menu.Item>Danh sách bài tập</Menu.Item>
+              <Menu.Item key="edit" onClick={() => showModal(record)}>Chỉnh sửa</Menu.Item>
+              <Menu.Item key="delete" danger onClick={() => handleDelete(record)}>Xóa</Menu.Item>
+              <Menu.Item key="students">Danh sách học sinh</Menu.Item>
+              <Menu.Item key="assignments">Danh sách bài tập</Menu.Item>
             </Menu>
           }
         >
@@ -104,7 +152,7 @@ const ClassManagementPage: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      {/* Header giống shadcn/ui */}
+      {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -112,7 +160,12 @@ const ClassManagementPage: React.FC = () => {
         marginBottom: 16
       }}>
         <Title level={3} style={{ margin: 0 }}>Quản lý Lớp học</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+        <Button 
+          type="default" 
+          icon={<PlusOutlined />} 
+          onClick={() => showModal()}
+          loading={isCreating} // Hiển thị loading khi đang tạo
+        >
           Thêm lớp học
         </Button>
       </div>
@@ -125,9 +178,10 @@ const ClassManagementPage: React.FC = () => {
         </div>
         <Table
           columns={columns}
-          dataSource={classes}
+          dataSource={classes || []} // Đảm bảo dataSource là mảng rỗng nếu chưa có dữ liệu
           rowKey="id"
           pagination={{ pageSize: 7 }}
+          loading={isLoading || isDeleting} // Thêm loading cho bảng khi đang fetch hoặc xóa
         />
       </Card>
 
@@ -139,12 +193,14 @@ const ClassManagementPage: React.FC = () => {
         onOk={() => form.submit()}
         okText={editingClass ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Hủy"
+        okType='default'
+        confirmLoading={isCreating || isUpdating} // Hiển thị loading cho nút OK khi đang tạo/cập nhật
       >
         <Form
           layout="vertical"
           form={form}
           onFinish={handleFinish}
-          initialValues={{ schoolYear: new Date().getFullYear() }}
+          initialValues={{ schoolYear: dayjs().year() }} // Set năm học mặc định là năm hiện tại
         >
           <Form.Item
             label="Tên lớp học"
@@ -159,7 +215,7 @@ const ClassManagementPage: React.FC = () => {
             name="schoolYear"
             rules={[{ required: true, message: 'Vui lòng nhập năm học' }]}
           >
-            <InputNumber min={2000} max={2100} style={{ width: '100%' }} />
+            <InputNumber min={1900} max={2100} style={{ width: '100%' }} />
           </Form.Item>
 
           <Form.Item
@@ -175,11 +231,12 @@ const ClassManagementPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            label="Giáo viên phụ trách (teacherId)"
+            label="Giáo viên phụ trách (ID)"
             name="teacherId"
-            rules={[{ required: true, message: 'Vui lòng nhập teacherId' }]}
+            rules={[{ required: true, message: 'Vui lòng nhập ID giáo viên' }]}
           >
             <InputNumber min={1} style={{ width: '100%' }} />
+            
           </Form.Item>
         </Form>
       </Modal>

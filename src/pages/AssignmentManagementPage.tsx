@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { } from "react";
 import {
   Card,
   Table,
@@ -10,6 +10,8 @@ import {
   Col,
   Input,
   Space,
+  Spin, 
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
@@ -18,42 +20,43 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import type { Assignment } from "../types";
+import dayjs from 'dayjs'; 
+import { useAssignments } from "../hooks/useAssignments";
+import type { Assignment } from '../types/Assignment';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-const initialAssignments: Assignment[] = [
-  {
-    id: 13,
-    title: "Bài Tập Tuần 2",
-    classId: 1,
-    dueDate: new Date("2025-08-08"),
-    maxScore: 15.0,
-  },
-  {
-    id: 17,
-    title: "Bài tập Java",
-    classId: 2,
-    dueDate: new Date("2025-08-08"),
-    maxScore: 10.0,
-  },
-  {
-    id: 18,
-    title: "Bài tập C#",
-    classId: 2,
-    dueDate: new Date("2025-08-10"),
-    maxScore: 12.0,
-  },
-];
-
 const AssignmentManagementPage: React.FC = () => {
-  const [assignments] = useState<Assignment[]>(initialAssignments);
+  const { data: assignments, isLoading, error } = useAssignments(); // Sử dụng hook useAssignments
 
-  const totalAssignments = assignments.length;
-  const upcomingAssignments = assignments.filter(
-    (a) => a.dueDate.getTime() > new Date().getTime()
-  ).length;
+  if (isLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 50 }}>
+        <Spin size="large" tip="Đang tải danh sách bài tập..." />
+      </div>
+    );
+  }
+
+  // Xử lý trạng thái lỗi
+  if (error) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert
+          message="Lỗi tải dữ liệu"
+          description={`Không thể tải danh sách bài tập: ${(error as Error).message}`}
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
+
+  // Tính toán lại stats sau khi có dữ liệu từ API
+  const totalAssignments = assignments ? assignments.length : 0;
+  const upcomingAssignments = assignments
+    ? assignments.filter((a: { dueDate: string | number | Date | dayjs.Dayjs | null | undefined; }) => dayjs(a.dueDate).isAfter(dayjs())).length // Sử dụng dayjs để so sánh ngày
+    : 0;
 
   const handleMenuClick = (key: string, record: Assignment) => {
     if (key === "edit") {
@@ -71,22 +74,26 @@ const AssignmentManagementPage: React.FC = () => {
     <Menu
       onClick={({ key }) => handleMenuClick(key as string, record)}
       items={[
-        { key: "edit", label: "Edit" },
-        { key: "delete", label: "Delete" },
-        { key: "submissions", label: "View Submissions" },
-        { key: "comments", label: "View Comments" },
+        { key: "edit", label: "Chỉnh sửa" },
+        { key: "delete", label: "Xóa" },
+        { key: "submissions", label: "Xem Bài Nộp" },
+        { key: "comments", label: "Xem Bình Luận" },
       ]}
     />
   );
 
   const columns: ColumnsType<Assignment> = [
     { title: "Tên Bài Tập", dataIndex: "title", key: "title" },
-    { title: "Lớp", dataIndex: "classId", key: "classId" },
+    { 
+      title: "Lớp", 
+      dataIndex: "className", // Đổi từ classId sang className để hiển thị tên lớp
+      key: "className" 
+    },
     {
       title: "Hạn Nộp",
       dataIndex: "dueDate",
       key: "dueDate",
-      render: (date: Date) => new Date(date).toLocaleDateString(),
+      render: (date: string) => dayjs(date).format('DD/MM/YYYY'), // Sử dụng dayjs để định dạng chuỗi ngày tháng
     },
     { title: "Điểm Tối Đa", dataIndex: "maxScore", key: "maxScore" },
     {
@@ -108,13 +115,14 @@ const AssignmentManagementPage: React.FC = () => {
           marginBottom: 16,
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center", // Căn giữa theo chiều dọc
         }}
       >
         <Title level={2} style={{ margin: 0 }}>
-          Assignment Management
+          Quản lý Bài tập
         </Title>
-        <Button type="primary" icon={<PlusOutlined />}>
-          Add Assignment
+        <Button type="default" icon={<PlusOutlined />}>
+          Thêm Bài tập
         </Button>
       </div>
 
@@ -150,12 +158,12 @@ const AssignmentManagementPage: React.FC = () => {
 
       {/* Table */}
       <Card
-        title={<Text strong>Assignments</Text>}
+        title={<Text strong>Danh sách Bài tập</Text>}
         extra={<Search placeholder="Tìm kiếm..." style={{ width: 250 }} />}
       >
         <Table
           columns={columns}
-          dataSource={assignments}
+          dataSource={assignments || []} // Đảm bảo dataSource là mảng rỗng nếu chưa có dữ liệu
           rowKey="id"
           pagination={{ pageSize: 7 }}
         />
