@@ -2,34 +2,48 @@ import React from "react";
 import { App as AntdApp } from "antd";
 import { useNavigate } from "react-router-dom";
 import { login as apiLogin } from "../api/authApi";
-import type { Credentials } from "../types/Auth";
-import { useAuth } from "../context/AuthContext";
+import type { Credentials, AuthResponse } from "../types/Auth";
+import type { User } from "../types/User";
+import { useAuth } from "../hooks/useAuth";
 import LoginForm from "../components/Auth/LoginForm";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login: authContextLogin } = useAuth();
+  const { login: authContextLogin, logout: authContextLogout } = useAuth();
   const { message: messageApi } = AntdApp.useApp();
 
-  const handleLogin = async (values: {
-    usernameOrEmail: string;
-    password: string;
-  }) => {
+  const handleLogin = async (values: { usernameOrEmail: string; password: string }) => {
     try {
-      // Map usernameOrEmail sang payload backend
-      const payload: Credentials = {
-        email: values.usernameOrEmail.includes("@")
-          ? values.usernameOrEmail
-          : undefined,
-        password: values.password,
+      const payload: Credentials = values.usernameOrEmail.includes("@")
+        ? { email: values.usernameOrEmail, password: values.password }
+        : { username: values.usernameOrEmail, password: values.password };
+
+      const { token, user: authUser }: AuthResponse = await apiLogin(payload);
+      console.log('Phản hồi từ API:', authUser);
+      
+      const appUser: User = {
+          id: authUser.id,
+          username: authUser.username,
+          fullName: authUser.fullName,
+          email: authUser.email,
+          roles: authUser.roles,
       };
 
-      const { token, user: userData } = await apiLogin(payload);
-      authContextLogin(token, userData);
-      messageApi.success("Đăng nhập thành công");
-      navigate("/dashboard");
+      authContextLogin(token, appUser); // Truyền đối tượng đã được ánh xạ
+
+      const hasAccess = appUser.roles?.includes("admin");
+
+      if (hasAccess) {
+        messageApi.success("Đăng nhập thành công");
+        navigate("/");
+      } else {
+        messageApi.error("Bạn không đủ quyền truy cập Dashboard.");
+        authContextLogout();
+        navigate("/login");
+      }
     } catch (error) {
       const errorMessage =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (error as any).response?.data?.message ||
         "Tên đăng nhập hoặc mật khẩu sai.";
       messageApi.error(errorMessage);
@@ -45,7 +59,6 @@ const LoginPage: React.FC = () => {
             Vui lòng đăng nhập để tiếp tục
           </p>
         </div>
-
         <LoginForm onLogin={handleLogin} />
       </div>
     </div>

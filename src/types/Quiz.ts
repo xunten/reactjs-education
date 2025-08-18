@@ -1,8 +1,13 @@
 export interface Quiz {
   id: number;
   title: string;
+  description?: string;
+  timeLimit: number;
+  startDate: Date;
+  endDate: Date;
   classId: number;
   className?: string;
-  dueDate: Date;
-  maxScore: number;
+  createdBy: number;
+  grade: string;
+  subject: string;
 }

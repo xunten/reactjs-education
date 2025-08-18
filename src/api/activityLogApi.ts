@@ -1,25 +1,18 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 import type { ActivityLog } from '../types';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = '/activity-logs';
 
-
-export const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
-  const token = localStorage.getItem('token'); 
-
-  if (!token) {
-    throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập.');
-  }
-
-  try {
-    const response = await axios.get<ActivityLog[]>(`${API_BASE_URL}/activity-logs`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Lỗi khi lấy nhật ký hoạt động:', error);
-    throw error;
-  }
+const activityLogApi = {
+  getAll: async (): Promise<ActivityLog[]> => {
+    try {
+      const response = await apiClient.get<ActivityLog[]>(BASE_URL);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy nhật ký hoạt động:', error);
+      throw error;
+    }
+  },
 };
+
+export default activityLogApi;

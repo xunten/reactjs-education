@@ -10,21 +10,24 @@ import {
   Row,
   Col,
   Spin,
-  Alert
+  Alert,
+  Avatar,
+  Tabs,
 } from "antd";
 import {
   MoreOutlined,
   PlusOutlined,
   UserOutlined,
-  TeamOutlined
+  TeamOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import type { User } from "../types";
+import type { User } from "../types/User";
 import { useUsers, useDeleteUser } from "../hooks/useUsers";
 
 const { Title, Text } = Typography;
+const { TabPane } = Tabs;
 
-const UserManagementPage: React.FC = () => {
+const UserManagementTabs: React.FC = () => {
   const { data: users, isLoading, error } = useUsers();
   const deleteMutation = useDeleteUser();
 
@@ -48,18 +51,19 @@ const UserManagementPage: React.FC = () => {
       {
         key: "edit",
         label: "Chỉnh sửa",
-        onClick: () => handleMenuClick("edit", record)
+        onClick: () => handleMenuClick("edit", record),
       },
       {
         key: "delete",
         label: "Xóa",
         danger: true,
-        onClick: () => handleMenuClick("delete", record)
-      }
+        onClick: () => handleMenuClick("delete", record),
+      },
     ],
     [handleMenuClick]
   );
 
+  // Cấu hình bảng
   const columns: ColumnsType<User> = useMemo(
     () => [
       {
@@ -72,16 +76,16 @@ const UserManagementPage: React.FC = () => {
               width: 32,
               height: 32,
               borderRadius: "50%",
-              backgroundColor: "#f0f0f0"
+              backgroundColor: "#f0f0f0",
             }}
           />
-        )
+        ),
       },
       {
         title: "Họ tên",
         dataIndex: "fullName",
         key: "fullName",
-        render: (text: string, record: User) => text || record.username
+        render: (text: string, record: User) => text || record.username,
       },
       { title: "Email", dataIndex: "email", key: "email" },
       {
@@ -97,15 +101,15 @@ const UserManagementPage: React.FC = () => {
                   role === "teacher"
                     ? "blue"
                     : role === "admin"
-                      ? "red"
-                      : "green"
+                    ? "red"
+                    : "green"
                 }
               >
                 {role}
               </Tag>
             ))}
           </Space>
-        )
+        ),
       },
       { title: "Username", dataIndex: "username", key: "username" },
       {
@@ -115,8 +119,8 @@ const UserManagementPage: React.FC = () => {
           <Dropdown menu={{ items: getMenuItems(record) }} trigger={["click"]}>
             <Button type="text" icon={<MoreOutlined />} />
           </Dropdown>
-        )
-      }
+        ),
+      },
     ],
     [getMenuItems]
   );
@@ -128,7 +132,7 @@ const UserManagementPage: React.FC = () => {
   if (isLoading) {
     return (
       <div style={{ textAlign: "center", padding: 50 }}>
-        <Spin tip="Đang tải dữ liệu..." fullscreen />
+        <Spin tip="Đang tải dữ liệu..." />
       </div>
     );
   }
@@ -176,31 +180,73 @@ const UserManagementPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Bảng danh sách */}
-      <Card
-        title={
-          <div>
-            <div style={{ fontWeight: "bold" }}>Danh sách Người dùng</div>
-            <div style={{ fontSize: 12, color: "gray" }}>
-              Quản lý người dùng (học sinh, giáo viên, admin)
-            </div>
-          </div>
-        }
-        extra={
-          <Button type="default" icon={<PlusOutlined />}>
-            Thêm Người dùng
-          </Button>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={users}
-          rowKey="id"
-          pagination={{ pageSize: 7 }}
-        />
-      </Card>
+      {/* Tabs */}
+      <Tabs defaultActiveKey="table">
+        <TabPane tab="Quản lý (Bảng)" key="table">
+          <Card
+            title={
+              <div>
+                <div style={{ fontWeight: "bold" }}>Danh sách Người dùng</div>
+                <div style={{ fontSize: 12, color: "gray" }}>
+                  Quản lý người dùng (học sinh, giáo viên, admin)
+                </div>
+              </div>
+            }
+            extra={
+              <Button type="default" icon={<PlusOutlined />}>
+                Thêm Người dùng
+              </Button>
+            }
+          >
+            <Table
+              columns={columns}
+              dataSource={users}
+              rowKey="id"
+              pagination={{ pageSize: 7 }}
+            />
+          </Card>
+        </TabPane>
+
+        <TabPane tab="Hồ sơ (Card)" key="card">
+          <Row gutter={[16, 16]}>
+            {users?.map((user) => (
+              <Col key={user.id} xs={24} sm={12} md={8} lg={6}>
+                <Card
+                  hoverable
+                  title={
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Avatar size={48} icon={<UserOutlined />} />
+                      <span>{user.fullName || user.username}</span>
+                    </div>
+                  }
+                >
+                  <p>
+                    <strong>Username:</strong> {user.username}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email}
+                  </p>
+                  <p>
+                    <strong>Vai trò:</strong> {user.roles.join(", ")}
+                  </p>
+                  <p>
+                    <strong>Trạng thái:</strong>{" "}
+                    {user.isActive ? "Hoạt động" : "Không hoạt động"}
+                  </p>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </TabPane>
+      </Tabs>
     </div>
   );
 };
 
-export default UserManagementPage;
+export default UserManagementTabs;

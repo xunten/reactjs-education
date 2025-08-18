@@ -1,12 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchActivityLogs, type ActivityLog } from '../api/activityLogApi'; 
-
+import activityLogApi from '../api/activityLogApi';
+import type { ActivityLog } from '../types';
 
 export const useActivityLogs = () => {
   return useQuery<ActivityLog[], Error>({
     queryKey: ['activityLogs'],
-    queryFn: fetchActivityLogs,
-    staleTime: 1000 * 60 * 5, 
-  
+    queryFn: activityLogApi.getAll,
+    staleTime: 5 * 60 * 1000, // 
   });
 };

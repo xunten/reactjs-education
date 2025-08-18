@@ -1,23 +1,35 @@
-import axios from 'axios';
-import type { Assignment } from '../types/Assignment';
+import apiClient from "./apiClient";
+import type { Assignment } from "../types/Assignment";
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = "/assignments";
 
-export const fetchAssignments = async (): Promise<Assignment[]> => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập.');
-  }
+export type CreateAssignmentPayload = Partial<Assignment>;
+export type UpdateAssignmentPayload = Partial<Assignment>;
 
-  try {
-    const response = await axios.get<Assignment[]>(`${API_BASE_URL}/assignments`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Lỗi khi lấy danh sách bài tập:', error);
-    throw error;
-  }
+const assignmentsApi = {
+  getAll: async (): Promise<Assignment[]> => {
+    const { data } = await apiClient.get<Assignment[]>(BASE_URL);
+    return data;
+  },
+
+  getById: async (id: number): Promise<Assignment> => {
+    const { data } = await apiClient.get<Assignment>(`${BASE_URL}/${id}`);
+    return data;
+  },
+
+  create: async (payload: CreateAssignmentPayload): Promise<Assignment> => {
+    const { data } = await apiClient.post<Assignment>(BASE_URL, payload);
+    return data;
+  },
+
+  update: async (id: number, payload: UpdateAssignmentPayload): Promise<Assignment> => {
+    const { data } = await apiClient.put<Assignment>(`${BASE_URL}/${id}`, payload);
+    return data;
+  },
+
+  remove: async (id: number): Promise<void> => {
+    await apiClient.delete(`${BASE_URL}/${id}`);
+  },
 };
+
+export default assignmentsApi;

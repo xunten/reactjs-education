@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Layout, Space, Button, Dropdown, Breadcrumb, Input, theme } from "antd";
+import { Layout, Space, Button, Dropdown, Breadcrumb, Input, theme, Typography } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined, BulbOutlined, UserOutlined, LogoutOutlined } from "@ant-design/icons";
-import { ThemeContext } from '../ThemeContext';
-import { useAuth } from '../../context/AuthContext'; 
+import { ThemeContext } from "../ThemeContext";
+import { useAuth } from "../../hooks/useAuth";
 
 const { Header: AntHeader } = Layout;
 const { Search } = Input;
+const { Text } = Typography;
 
 type AppHeaderProps = {
   collapsed: boolean;
@@ -14,18 +15,28 @@ type AppHeaderProps = {
 };
 
 const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggle }) => {
-  const { token: { colorBgContainer } } = theme.useToken();
+  const {
+    token: { colorBgContainer },
+  } = theme.useToken();
   const { toggleTheme } = React.useContext(ThemeContext);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth(); // ✅ lấy user từ AuthContext
   const location = useLocation();
 
   const pathnames = location.pathname.split("/").filter(Boolean);
 
   const breadcrumbItems = useMemo(() => {
-    const items: { title: React.ReactNode }[] = [{ title: <Link to="/dashboard">Dashboard</Link> }];
+    const items: { title: React.ReactNode }[] = [
+      { title: <Link to="/dashboard">Dashboard</Link> },
+    ];
     pathnames.forEach((value, index) => {
       const href = `/${pathnames.slice(0, index + 1).join("/")}`;
-      items.push({ title: <Link to={href}>{value.charAt(0).toUpperCase() + value.slice(1)}</Link> });
+      items.push({
+        title: (
+          <Link to={href}>
+            {value.charAt(0).toUpperCase() + value.slice(1)}
+          </Link>
+        ),
+      });
     });
     return items;
   }, [pathnames]);
@@ -36,8 +47,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggle }) => {
 
   const userDropdownMenuItems = useMemo(
     () => [
-      { key: "profile", icon: <UserOutlined />, label: <Link to="/profile">Thông tin cá nhân</Link> },
-      { key: "logout", icon: <LogoutOutlined />, label: "Đăng xuất", onClick: () => logout() },
+      {
+        key: "logout",
+        icon: <LogoutOutlined />,
+        label: "Đăng xuất",
+        onClick: () => logout(),
+      },
     ],
     [logout]
   );
@@ -71,9 +86,21 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggle }) => {
           allowClear
           style={{ width: 240, verticalAlign: "middle" }}
         />
-        <Button type="text" onClick={toggleTheme} icon={<BulbOutlined style={{ fontSize: 18 }} />} />
+        <Button
+          type="text"
+          onClick={toggleTheme}
+          icon={<BulbOutlined style={{ fontSize: 18 }} />}
+        />
         <Dropdown menu={{ items: userDropdownMenuItems }} placement="bottomRight" arrow>
-          <Button type="text" icon={<UserOutlined style={{ fontSize: 18 }} />} />
+          <Space
+            style={{
+              padding: "0 8px",
+              cursor: "pointer",
+            }}
+          >
+            <UserOutlined style={{ fontSize: 18 }} />
+            <Text strong>{user?.username || user?.email}</Text>
+          </Space>
         </Dropdown>
       </Space>
     </AntHeader>

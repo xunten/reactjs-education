@@ -1,24 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:8080/api';
+import apiClient from "./apiClient";
 
 export const fetchUsers = async () => {
-  const { data } = await axios.get(`${API_BASE_URL}/users`);
+  const { data } = await apiClient.get("/users");
   return data;
 };
 
 export const createUser = async (userData: any) => {
-  const { data } = await axios.post(`${API_BASE_URL}/users`, userData);
+  const { data } = await apiClient.post("/users", userData);
   return data;
 };
 
 export const updateUser = async (userId: number, userData: any) => {
-  const { data } = await axios.put(`${API_BASE_URL}/users/${userId}`, userData);
+  const { data } = await apiClient.put(`/users/${userId}`, userData);
   return data;
 };
 
 export const deleteUser = async (userId: number) => {
-  const { data } = await axios.delete(`${API_BASE_URL}/users/${userId}`);
+  const { data } = await apiClient.delete(`/users/${userId}`);
   return data;
 };

@@ -1,16 +1,16 @@
-import React, { } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React from "react";
 import {
   Card,
   Table,
   Typography,
   Button,
   Dropdown,
-  Menu,
   Row,
   Col,
   Input,
   Space,
-  Spin, 
+  Spin,
   Alert,
 } from "antd";
 import {
@@ -19,26 +19,88 @@ import {
   FileTextOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from 'dayjs'; 
+import dayjs from "dayjs";
 import { useAssignments } from "../hooks/useAssignments";
-import type { Assignment } from '../types/Assignment';
+import { useClasses } from "../hooks/useClasses";
+import type { Assignment } from "../types/Assignment";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
 const AssignmentManagementPage: React.FC = () => {
-  const { data: assignments, isLoading, error } = useAssignments(); // Sử dụng hook useAssignments
+  const { assignments, isLoading, error, deleteAssignment } = useAssignments();
+  const { classes = [] } = useClasses();
+
+  // Tính stats
+  const totalAssignments = assignments.length;
+  const upcomingAssignments = assignments.filter(a =>
+    dayjs(a.dueDate).isAfter(dayjs())
+  ).length;
+
+  // Lấy tên lớp từ classId
+  const getClassName = (classId: number) => {
+    const cls = classes.find(c => c.id === classId);
+    return cls ? cls.className : "Không rõ";
+  };
+
+  // Menu hành động
+  const handleMenuClick = (key: string, record: Assignment) => {
+    if (key === "edit") {
+      console.log("Edit", record);
+    } else if (key === "delete") {
+      deleteAssignment(record.id);
+    } else if (key === "submissions") {
+      console.log("View Submissions", record);
+    } else if (key === "comments") {
+      console.log("View Comments", record);
+    }
+  };
+
+  const menuItems = [
+    { key: "edit", label: "Chỉnh sửa" },
+    { key: "delete", label: "Xóa" },
+    { key: "submissions", label: "Xem Bài Nộp" },
+    { key: "comments", label: "Xem Bình Luận" },
+  ];
+
+
+  const columns = [
+    { title: "Tên Bài Tập", dataIndex: "title", key: "title" },
+    {
+      title: "Lớp",
+      key: "className",
+      render: (_: any, record: Assignment) => getClassName(record.classId),
+    },
+    {
+      title: "Hạn Nộp",
+      dataIndex: "dueDate",
+      key: "dueDate",
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
+    },
+    { title: "Điểm Tối Đa", dataIndex: "maxScore", key: "maxScore" },
+    {
+      title: "Hành động",
+      key: "action",
+      render: (_: any, record: Assignment) => (
+        <Dropdown
+          menu={{ items: menuItems, onClick: ({ key }) => handleMenuClick(key, record) }}
+          trigger={["click"]}
+        >
+          <Button icon={<MoreOutlined />} />
+        </Dropdown>
+
+      ),
+    },
+  ];
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: 50 }}>
+      <div style={{ textAlign: "center", padding: 50 }}>
         <Spin size="large" tip="Đang tải danh sách bài tập..." />
       </div>
     );
   }
 
-  // Xử lý trạng thái lỗi
   if (error) {
     return (
       <div style={{ padding: 24 }}>
@@ -52,61 +114,6 @@ const AssignmentManagementPage: React.FC = () => {
     );
   }
 
-  // Tính toán lại stats sau khi có dữ liệu từ API
-  const totalAssignments = assignments ? assignments.length : 0;
-  const upcomingAssignments = assignments
-    ? assignments.filter((a: { dueDate: string | number | Date | dayjs.Dayjs | null | undefined; }) => dayjs(a.dueDate).isAfter(dayjs())).length // Sử dụng dayjs để so sánh ngày
-    : 0;
-
-  const handleMenuClick = (key: string, record: Assignment) => {
-    if (key === "edit") {
-      console.log("Edit", record);
-    } else if (key === "delete") {
-      console.log("Delete", record);
-    } else if (key === "submissions") {
-      console.log("View Submissions", record);
-    } else if (key === "comments") {
-      console.log("View Comments", record);
-    }
-  };
-
-  const menu = (record: Assignment) => (
-    <Menu
-      onClick={({ key }) => handleMenuClick(key as string, record)}
-      items={[
-        { key: "edit", label: "Chỉnh sửa" },
-        { key: "delete", label: "Xóa" },
-        { key: "submissions", label: "Xem Bài Nộp" },
-        { key: "comments", label: "Xem Bình Luận" },
-      ]}
-    />
-  );
-
-  const columns: ColumnsType<Assignment> = [
-    { title: "Tên Bài Tập", dataIndex: "title", key: "title" },
-    { 
-      title: "Lớp", 
-      dataIndex: "className", // Đổi từ classId sang className để hiển thị tên lớp
-      key: "className" 
-    },
-    {
-      title: "Hạn Nộp",
-      dataIndex: "dueDate",
-      key: "dueDate",
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'), // Sử dụng dayjs để định dạng chuỗi ngày tháng
-    },
-    { title: "Điểm Tối Đa", dataIndex: "maxScore", key: "maxScore" },
-    {
-      title: "Hành động",
-      key: "action",
-      render: (_, record) => (
-        <Dropdown overlay={menu(record)} trigger={["click"]}>
-          <Button icon={<MoreOutlined />} />
-        </Dropdown>
-      ),
-    },
-  ];
-
   return (
     <div className="assignment-page" style={{ padding: 24 }}>
       {/* Header */}
@@ -115,7 +122,7 @@ const AssignmentManagementPage: React.FC = () => {
           marginBottom: 16,
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center", // Căn giữa theo chiều dọc
+          alignItems: "center",
         }}
       >
         <Title level={2} style={{ margin: 0 }}>
@@ -163,7 +170,7 @@ const AssignmentManagementPage: React.FC = () => {
       >
         <Table
           columns={columns}
-          dataSource={assignments || []} // Đảm bảo dataSource là mảng rỗng nếu chưa có dữ liệu
+          dataSource={assignments}
           rowKey="id"
           pagination={{ pageSize: 7 }}
         />

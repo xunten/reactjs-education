@@ -10,11 +10,6 @@ const { Title } = Typography;
 
 const columns: ColumnsType<ActivityLog> = [
   {
-    title: 'ID',
-    dataIndex: 'id',
-    key: 'id',
-  },
-  {
     title: 'Tên người dùng',
     dataIndex: 'fullName',
     key: 'fullName',
@@ -40,11 +35,6 @@ const columns: ColumnsType<ActivityLog> = [
     title: 'Bảng ảnh hưởng',
     dataIndex: 'targetTable',
     key: 'targetTable',
-  },
-  {
-    title: 'ID mục tiêu',
-    dataIndex: 'targetId',
-    key: 'targetId',
   },
 ];
 
@@ -82,7 +72,7 @@ const ActivityLogPage: React.FC = () => {
           columns={columns}
           dataSource={activityLogs || []} 
           rowKey="id"
-          pagination={{ pageSize: 7 }}
+          pagination={{ pageSize: 8 }}
         />
       </Card>
     </div>

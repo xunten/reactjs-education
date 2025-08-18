@@ -1,22 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import type { User } from "../types/User";
+import { useState, useEffect, type ReactNode } from "react";
+import { AuthContext } from "../../context/AuthContext";
+import type { User } from "../../types/User";
 
-export interface AuthContextType {
-  isLoggedIn: boolean;
-  user: User | null;
-  login: (token: string, userData: User) => void;
-  logout: () => void;
-  isLoading: boolean;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,14 +42,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-// Hook vẫn giữ nguyên
-// eslint-disable-next-line react-refresh/only-export-components
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 };
