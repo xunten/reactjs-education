@@ -1,49 +1,59 @@
-import axios from 'axios';
-// QUAN TRỌNG: Import interface Class từ file types của bạn
-import type { Class } from '../types'; 
+// classApi.ts
+import apiClient from "./apiClient";
+import type { Class } from "../types";
 
-const API_BASE_URL = 'http://localhost:8080/api'; 
+const BASE_URL = "auth/classes";
 
-export type ClassCreateDTO = Omit<Class, 'id' | 'teacherName'>;
-
+export type ClassCreateDTO = Omit<Class, "id">;
 export type ClassUpdateDTO = Class;
 
-export const fetchClasses = async (): Promise<Class[]> => {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('Không tìm thấy token xác thực.');
+const classApi = {
+  getAll: async (): Promise<Class[]> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await apiClient.get<any[]>("/auth/classes"); // trả về mảng class từ API
 
-  // <-- ĐÃ SỬA: Thay đổi đường dẫn thành "/auth/classes"
-  const response = await axios.get<Class[]>(`${API_BASE_URL}/auth/classes`, { 
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return response.data;
+    // map dữ liệu để phù hợp với interface Class
+    return response.data.map((item) => ({
+      id: item.id,
+      className: item.className,
+      schoolYear: item.schoolYear,
+      semester: item.semester,
+      description: item.description,
+      teacherId: item.teacher?.id ?? 0,
+      fullName: item.teacher?.fullName ?? "",
+      subjectId: item.subject?.id ?? 0,
+    })) as Class[];
+  },
+
+  getById: async (id: number): Promise<Class> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await apiClient.get<any>(`${BASE_URL}/${id}`);
+    const item = response.data;
+    return {
+      id: item.id,
+      className: item.className,
+      schoolYear: item.schoolYear,
+      semester: item.semester,
+      description: item.description,
+      teacherId: item.teacher?.id ?? 0,
+      fullName: item.teacher?.fullName ?? "",
+      subjectId: item.subject?.id ?? 0,
+    } as Class;
+  },
+
+  create: async (newClass: ClassCreateDTO): Promise<Class> => {
+    const response = await apiClient.post<Class>(BASE_URL, newClass);
+    return response.data;
+  },
+
+  update: async (updatedClass: ClassUpdateDTO): Promise<Class> => {
+    const response = await apiClient.put<Class>(`${BASE_URL}/${updatedClass.id}`, updatedClass);
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiClient.delete(`${BASE_URL}/${id}`);
+  },
 };
 
-export const createClass = async (newClass: ClassCreateDTO): Promise<Class> => {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('Không tìm thấy token xác thực.');
-
-  const response = await axios.post<Class>(`${API_BASE_URL}/classes`, newClass, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return response.data;
-};
-
-export const updateClass = async (updatedClass: ClassUpdateDTO): Promise<Class> => {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('Không tìm thấy token xác thực.');
-
-  const response = await axios.put<Class>(`${API_BASE_URL}/classes/${updatedClass.id}`, updatedClass, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return response.data;
-};
-
-export const deleteClass = async (id: number): Promise<void> => {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('Không tìm thấy token xác thực.');
-
-  await axios.delete(`${API_BASE_URL}/classes/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-};
+export default classApi;

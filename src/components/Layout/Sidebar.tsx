@@ -31,7 +31,7 @@ const mainMenuItems = [
   { key: "6", icon: <BookOutlined />, label: "Tài liệu", path: "/materials" },
   { key: "7", icon: <CalendarOutlined />, label: "Điểm danh", path: "/attendance" },
   { key: "8", icon: <UserOutlined />, label: "Quản lý User", path: "/users" },
-  { key: "9", icon: <ClockCircleOutlined />, label: "Lịch trình", path: "/schedule" },
+  { key: "9", icon: <ClockCircleOutlined />, label: "Thời Khóa biểu", path: "/schedule" },
   { key: "10", icon: <AuditOutlined />, label: "Logs", path: "/logs" },
 ];
 

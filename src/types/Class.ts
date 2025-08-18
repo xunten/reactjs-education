@@ -5,7 +5,7 @@ export interface Class {
   semester: string;
   description?: string;
   teacherId: number;
-  teacherName?: string;
+  fullName: string;
   subjectId: number;
 
 }

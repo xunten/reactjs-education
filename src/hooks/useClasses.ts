@@ -1,24 +1,20 @@
+// useClasses.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Class } from '../types'; 
 import type { ClassCreateDTO, ClassUpdateDTO } from '../api/classApi'; 
-import { 
-  fetchClasses, 
-  createClass, 
-  updateClass, 
-  deleteClass, 
-} from '../api/classApi'; 
+import classApi from '../api/classApi';
 
 export const useClasses = () => {
   const queryClient = useQueryClient();
 
   const classesQuery = useQuery<Class[], Error>({
     queryKey: ['classes'], 
-    queryFn: fetchClasses, 
+    queryFn: classApi.getAll,    
     staleTime: 1000 * 60 * 5, 
   });
 
   const createClassMutation = useMutation<Class, Error, ClassCreateDTO>({
-    mutationFn: createClass, 
+    mutationFn: classApi.create, 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
     },
@@ -28,7 +24,7 @@ export const useClasses = () => {
   });
 
   const updateClassMutation = useMutation<Class, Error, ClassUpdateDTO>({
-    mutationFn: updateClass,
+    mutationFn: classApi.update, 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
     },
@@ -38,7 +34,7 @@ export const useClasses = () => {
   });
 
   const deleteClassMutation = useMutation<void, Error, number>({
-    mutationFn: deleteClass,
+    mutationFn: classApi.delete, 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
     },

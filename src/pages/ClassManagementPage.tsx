@@ -128,7 +128,7 @@ const ClassManagementPage: React.FC = () => {
     { title: 'Tên lớp', dataIndex: 'className', key: 'className' },
     { title: 'Năm học', dataIndex: 'schoolYear', key: 'schoolYear' },
     { title: 'Học kỳ', dataIndex: 'semester', key: 'semester' },
-    { title: 'Giáo viên', dataIndex: 'teacherName', key: 'teacherName' },
+    { title: 'Giáo viên', dataIndex: 'fullName', key: 'fullName' },
     {
       title: 'Hành động',
       key: 'actions',

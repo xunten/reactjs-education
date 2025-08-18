@@ -5,6 +5,6 @@ export interface Attendance {
   fullName: string;
   scheduleId?: number;
   className: string;
-  status: 'PRESENT' | 'ABSENT' | 'LATE';
+  status: 'Present' | 'Absent' | 'Late';
   markedAt: string;
 }
