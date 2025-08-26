@@ -12,7 +12,7 @@ export const createUser = async (userData: any) => {
 };
 
 export const updateUser = async (userId: number, userData: any) => {
-  const { data } = await apiClient.put(`/users/${userId}`, userData);
+  const { data } = await apiClient.patch(`/users/${userId}`, userData);
   return data;
 };
 

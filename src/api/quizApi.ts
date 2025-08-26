@@ -13,7 +13,7 @@ const quizApi = {
     return data;
   },
   update: async (id: number, quiz: Partial<Quiz>): Promise<Quiz> => {
-    const { data } = await apiClient.put(`${API_URL}/${id}`, quiz);
+    const { data } = await apiClient.patch(`${API_URL}/${id}`, quiz);
     return data;
   },
   remove: async (id: number): Promise<void> => {

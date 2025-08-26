@@ -1,8 +1,8 @@
 export interface Subject {
   id: number;
-  subject_name: string;
+  subjectName: string;
   description: string;
-  created_by: number;
-  created_at: Date;
-  updated_at: Date;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
 }

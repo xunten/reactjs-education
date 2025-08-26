@@ -23,7 +23,7 @@ const assignmentsApi = {
   },
 
   update: async (id: number, payload: UpdateAssignmentPayload): Promise<Assignment> => {
-    const { data } = await apiClient.put<Assignment>(`${BASE_URL}/${id}`, payload);
+    const { data } = await apiClient.patch<Assignment>(`${BASE_URL}/${id}`, payload);
     return data;
   },
 

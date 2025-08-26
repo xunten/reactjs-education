@@ -9,6 +9,8 @@ export * from './Quiz';
 export * from './QuizSubmission';
 export * from './Schedule';
 export * from './Subject';
-export * from './Submission';
+export * from './Submissions';
 export * from './User';
-
+export * from './ClassUser';
+export * from './Location';
+export * from './LessonPlan';

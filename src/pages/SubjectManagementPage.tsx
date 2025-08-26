@@ -1,159 +1,191 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, Table, Typography, Button, Space, Row, Col, Input, Modal, Form, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, BookOutlined } from '@ant-design/icons';
-import moment from 'moment';
 import type { Subject } from '../types';
+import { useSubjects, useCreateSubject, useUpdateSubject, useDeleteSubject } from '../hooks/useSubjects';
+import dayjs from 'dayjs';
+import { useDebounce } from 'use-debounce';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-
-const initialSubjects: Subject[] = [
-    {
-        id: 1,
-        subject_name: 'Toán Cao Cấp',
-        description: 'Môn học cơ bản về đại số và giải tích.',
-        created_by: 1,
-        created_at: new Date('2025-08-01T10:00:00Z'),
-        updated_at: new Date('2025-08-01T10:00:00Z')
-    },
-    {
-        id: 2,
-        subject_name: 'Lập trình Python',
-        description: 'Giới thiệu về ngôn ngữ lập trình Python.',
-        created_by: 2,
-        created_at: new Date('2025-08-05T14:30:00Z'),
-        updated_at: new Date('2025-08-05T14:30:00Z')
-    },
-    {
-        id: 3,
-        subject_name: 'Vật lý Đại cương',
-        description: 'Các kiến thức cơ bản về cơ học và nhiệt học.',
-        created_by: 1,
-        created_at: new Date('2025-08-07T09:00:00Z'),
-        updated_at: new Date('2025-08-07T09:00:00Z')
-    },
-];
+const removeVietnameseTones = (str: string) =>
+  str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
 
 const SubjectManagementPage: React.FC = () => {
-    const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-    const [isModalVisible, setIsModalVisible] = useState(false);
-    const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-    const [form] = Form.useForm();
+  // Hooks gọi API
+  const { data: subjects = [], isLoading } = useSubjects();
+  const createSubject = useCreateSubject();
+  const updateSubject = useUpdateSubject();
+  const deleteSubject = useDeleteSubject();
 
-    const handleAddSubject = () => {
-        setEditingSubject(null);
-        form.resetFields();
-        setIsModalVisible(true);
-    };
+  // State
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [form] = Form.useForm();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
-    const handleEditSubject = (subject: Subject) => {
-        setEditingSubject(subject);
-        form.setFieldsValue(subject);
-        setIsModalVisible(true);
-    };
+  // ✅ Handlers bọc useCallback để tránh re-create mỗi lần render
+  const handleAddSubject = useCallback(() => {
+    setEditingSubject(null);
+    form.resetFields();
+    setIsModalVisible(true);
+  }, [form]);
 
-    const handleDeleteSubject = (subjectId: number) => {
-        setSubjects(subjects.filter(subject => subject.id !== subjectId));
-    };
+  const handleEditSubject = useCallback((subject: Subject) => {
+    setEditingSubject(subject);
+    form.setFieldsValue(subject);
+    setIsModalVisible(true);
+  }, [form]);
 
-    const handleSave = () => {
+  const handleDeleteSubject = useCallback((subjectId: number) => {
+    deleteSubject.mutate(subjectId);
+  }, [deleteSubject]);
+
+  const handleSave = useCallback(() => {
     form.validateFields().then(values => {
-        if (editingSubject) {
-            setSubjects(subjects.map(subject => subject.id === editingSubject.id ? { ...editingSubject, ...values, updated_at: new Date() } : subject));
-        } else {
-            const newSubject: Subject = {
-                ...values,
-                id: Date.now(),
-                created_by: 1, // Giả định người dùng hiện tại có id là 1
-                created_at: new Date(),
-                updated_at: new Date()
-            };
-            setSubjects([...subjects, newSubject]);
-        }
-        setIsModalVisible(false);
-        form.resetFields();
+      if (editingSubject) {
+        updateSubject.mutate({ subjectId: editingSubject.id, subjectData: values });
+      } else {
+        createSubject.mutate(values);
+      }
+      setIsModalVisible(false);
+      form.resetFields();
     });
-};
+  }, [editingSubject, updateSubject, createSubject, form]);
 
-    const columns = [
-        { title: 'Môn học', dataIndex: 'subject_name', key: 'subject_name' },
-        { title: 'Mô tả', dataIndex: 'description', key: 'description' },
-        { title: 'Ngày tạo', dataIndex: 'created_at', key: 'created_at', render: (date: Date) => moment(date).format('DD/MM/YYYY HH:mm') },
-        {
-            title: 'Hành động',
-            key: 'action',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            render: (_: any, record: Subject) => (
-                <Space size="middle">
-                    <Button icon={<EditOutlined />} onClick={() => handleEditSubject(record)} />
-                    <Popconfirm
-                        title="Bạn có chắc chắn muốn xóa môn học này không?"
-                        onConfirm={() => handleDeleteSubject(record.id)}
-                        okText="Có"
-                        cancelText="Không"
-                    >
-                        <Button icon={<DeleteOutlined />} danger />
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
-
-    const totalSubjects = subjects.length;
-
-    return (
-        <div style={{ padding: 24 }}>
-            <Title level={2}>Quản lý Môn học</Title>
-
-            <Row gutter={16} style={{ marginBottom: 24 }}>
-                <Col span={24}>
-                    <Card>
-                        <Space align="center">
-                            <BookOutlined style={{ fontSize: '32px', color: '#1890ff' }} />
-                            <div>
-                                <Text type="secondary">Tổng số môn học</Text>
-                                <Title level={3} style={{ margin: 0 }}>{totalSubjects}</Title>
-                            </div>
-                        </Space>
-                    </Card>
-                </Col>
-            </Row>
-
-            <Card
-                title={<Text strong>Danh sách Môn học</Text>}
-                extra={
-                    <Button type="default" icon={<PlusOutlined />} onClick={handleAddSubject}>
-                        Thêm môn học mới
-                    </Button>
-                }
+  // ✅ Columns chỉ tạo 1 lần nhờ useMemo
+  const columns = useMemo(
+    () => [
+      { title: 'Subject Name', dataIndex: 'subjectName', key: 'subjectName' },
+      { title: 'Description', dataIndex: 'description', key: 'description' },
+      {
+        title: 'Created At',
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        render: (createdAt: string) => dayjs(createdAt).format('DD/MM/YYYY HH:mm:ss'),
+      },
+      {
+        title: 'Actions',
+        key: 'action',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        render: (_: any, record: Subject) => (
+          <Space size="middle">
+            <Button icon={<EditOutlined />} onClick={() => handleEditSubject(record)} />
+            <Popconfirm
+              title="Are you sure you want to delete this subject?"
+              onConfirm={() => handleDeleteSubject(record.id)}
+              okText="Yes"
+              okType="danger"
+              cancelText="No"
             >
-                <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
-                    <Search placeholder="Tìm kiếm môn học..." style={{ width: 300 }} />
-                </Space>
-                <Table columns={columns} dataSource={subjects} rowKey="id" pagination={{ pageSize: 7 }} />
-            </Card>
+              <Button icon={<DeleteOutlined />} danger />
+            </Popconfirm>
+          </Space>
+        ),
+      },
+    ],
+    [handleEditSubject, handleDeleteSubject]
+  );
 
-            <Modal
-                title={editingSubject ? "Chỉnh sửa môn học" : "Thêm môn học mới"}
-                open={isModalVisible}
-                onOk={handleSave}
-                onCancel={() => setIsModalVisible(false)}
-                destroyOnClose
-                okText="Lưu"
-                cancelText="Hủy"
-            >
-                <Form form={form} layout="vertical" initialValues={editingSubject || {}}>
-                    <Form.Item name="subject_name" label="Tên môn học" rules={[{ required: true, message: 'Vui lòng nhập tên môn học!' }]}>
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="description" label="Mô tả" rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]}>
-                        <Input.TextArea />
-                    </Form.Item>
-                </Form>
-            </Modal>
-        </div>
+  // ✅ Search có debounce
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter(s =>
+      removeVietnameseTones(s.subjectName)
+        .toLowerCase()
+        .includes(removeVietnameseTones(debouncedSearchTerm).toLowerCase())
     );
+  }, [subjects, debouncedSearchTerm]);
+
+  return (
+    <div style={{ padding: 24 }}>
+      {/* Header */}
+      <Title level={2} style={{ marginBottom: 16 }}>
+        📚 Subject Management
+      </Title>
+
+      {/* Thống kê */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={24}>
+          <Card style={{ background: '#fafafa' }}>
+            <Space align="center">
+              <BookOutlined style={{ fontSize: 32, color: '#1677ff' }} />
+              <div>
+                <Text strong>Total Subjects</Text>
+                <Title level={3} style={{ margin: 0 }}>
+                  {subjects.length}
+                </Title>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Danh sách */}
+      <Card
+        title={<Text strong style={{ fontSize: 16 }}>Subject List</Text>}
+        extra={
+          <Button type="default" icon={<PlusOutlined />} onClick={handleAddSubject}>
+            Add New Subject
+          </Button>
+        }
+      >
+        <Row justify="space-between" style={{ marginBottom: 16 }}>
+          <Col>
+            <Search
+              placeholder="Search subject..."
+              style={{ width: 300 }}
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              allowClear
+            />
+          </Col>
+        </Row>
+
+        <Table
+          columns={columns}
+          dataSource={filteredSubjects}
+          rowKey="id"
+          loading={isLoading}
+          pagination={{ pageSize: 7 }} // 👉 sau này có thể đổi sang server-side
+        />
+      </Card>
+
+      {/* Modal */}
+      <Modal
+        destroyOnClose
+        title={editingSubject ? 'Edit Subject' : 'Add New Subject'}
+        open={isModalVisible}
+        onOk={handleSave}
+        onCancel={() => setIsModalVisible(false)}
+        okText="Save"
+        okType="default"
+        cancelText="Cancel"
+      >
+        <Form form={form} layout="vertical" initialValues={editingSubject || {}}>
+          <Form.Item
+            name="subjectName"
+            label="Subject Name"
+            rules={[{ required: true, message: 'Please enter subject name!' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="Description"
+            rules={[{ required: true, message: 'Please enter description!' }]}
+          >
+            <Input.TextArea />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
 };
 
 export default SubjectManagementPage;

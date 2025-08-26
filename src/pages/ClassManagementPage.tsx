@@ -1,24 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Table,
   Typography,
   Button,
   Dropdown,
-  Menu,
   Modal,
   Form,
   Input,
   InputNumber,
   Select,
   message,
-  Spin, 
+  Spin,
   Alert,
+  Radio,
+  Popconfirm,
+  Space,
 } from 'antd';
-import { MoreOutlined, PlusOutlined } from '@ant-design/icons';
+import { BookOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Class } from '../types';
 import { useClasses } from '../hooks/useClasses';
+import { useSubjects } from '../hooks/useSubjects';
+import { useUsers } from '../hooks/useUsers';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -26,26 +30,58 @@ const { Option } = Select;
 
 const ClassManagementPage: React.FC = () => {
   const [form] = Form.useForm();
-  const { 
-    classes, 
-    isLoading, 
-    error, 
-    createClass, 
-    updateClass, 
+  const {
+    classes,
+    isLoading,
+    error,
+    createClass,
+    updateClass,
     deleteClass,
     isCreating,
     isUpdating,
     isDeleting,
-  } = useClasses(); // Sử dụng hook useClasses
+  } = useClasses();
+
+  const { data: subjects = [], isLoading: isSubjectsLoading } = useSubjects();
+  const { data: users = [], isLoading: isUsersLoading } = useUsers();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
+  const [searchText, setSearchText] = useState('');
 
-  // Hiển thị trạng thái loading/error khi fetch dữ liệu ban đầu
-  if (isLoading) {
+  // Map lookup để tối ưu tìm kiếm
+  const subjectMap = useMemo(() => {
+    const map = new Map<number, string>();
+    subjects.forEach(sub => map.set(sub.id, sub.subjectName));
+    return map;
+  }, [subjects]);
+
+  const teacherMap = useMemo(() => {
+    const map = new Map<number, string>();
+    users.forEach(u => {
+      if (Array.isArray(u.roles) && u.roles.some(r => r.name.toLowerCase() === 'teacher')) {
+        map.set(u.id, u.full_name);
+      }
+    });
+    return map;
+  }, [users]);
+
+  const classesWithNames = useMemo(() => {
+    if (!classes) return [];
+    const search = searchText.toLowerCase();
+    return classes
+      .map(cls => ({
+        ...cls,
+        subjectName: subjectMap.get(cls.subjectId) || 'N/A',
+        fullName: teacherMap.get(cls.teacherId) || 'N/A',
+      }))
+      .filter(c => c.className.toLowerCase().includes(search));
+  }, [classes, subjectMap, teacherMap, searchText]);
+
+  if (isLoading || isSubjectsLoading || isUsersLoading) {
     return (
       <div style={{ textAlign: 'center', padding: 50 }}>
-        <Spin size="large" tip="Đang tải danh sách lớp học..." />
+        <Spin size="large" tip="Loading data..." />
       </div>
     );
   }
@@ -54,8 +90,8 @@ const ClassManagementPage: React.FC = () => {
     return (
       <div style={{ padding: 24 }}>
         <Alert
-          message="Lỗi tải dữ liệu"
-          description={`Không thể tải danh sách lớp học: ${(error as Error).message}`}
+          message="Error loading data"
+          description={`Could not load class list: ${(error as Error).message}`}
           type="error"
           showIcon
         />
@@ -67,12 +103,14 @@ const ClassManagementPage: React.FC = () => {
     setEditingClass(record || null);
     setIsModalVisible(true);
     if (record) {
-      // Đối với năm học, đảm bảo nó là number
-      form.setFieldsValue({ ...record, schoolYear: Number(record.schoolYear) });
+      form.setFieldsValue({
+        ...record,
+        schoolYear: Number(record.schoolYear),
+        semester: record.semester,
+      });
     } else {
       form.resetFields();
-      // Đặt giá trị mặc định cho năm học là năm hiện tại khi thêm mới
-      form.setFieldsValue({ schoolYear: dayjs().year() });
+      form.setFieldsValue({ schoolYear: dayjs().year(), semester: '' });
     }
   };
 
@@ -82,67 +120,68 @@ const ClassManagementPage: React.FC = () => {
     form.resetFields();
   };
 
-  const handleFinish = async (values: Class) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleFinish = async (values: any) => {
     try {
+      const payload = { ...values, semester: values.semester };
       if (editingClass) {
-        // Cập nhật lớp học
-        await updateClass({ ...editingClass, ...values });
-        message.success('Cập nhật lớp học thành công');
+        await updateClass({ ...editingClass, ...payload });
+        message.success('Class updated successfully');
       } else {
-        // Thêm lớp học mới (bỏ qua ID vì backend sẽ tạo)
-        await createClass(values); // values sẽ là ClassCreateDTO
-        message.success('Thêm lớp học thành công');
+        await createClass(payload);
+        message.success('Class created successfully');
       }
-      handleCancel(); // Đóng modal và reset form
+      handleCancel();
     } catch (err) {
-      console.error('Lỗi khi lưu lớp học:', err);
-      message.error('Có lỗi xảy ra khi lưu lớp học.');
+      console.error('Error saving class:', err);
+      message.error('An error occurred while saving the class.');
     }
   };
 
-  const handleDelete = (record: Class) => {
-    Modal.confirm({
-      title: 'Xác nhận xóa lớp học',
-      content: `Bạn có chắc muốn xóa lớp: ${record.className}?`,
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          if (record.id) { // Đảm bảo có ID để xóa
-            await deleteClass(record.id);
-            message.success('Đã xóa lớp học');
-          } else {
-            message.error('Không tìm thấy ID lớp học để xóa.');
-          }
-        } catch (err) {
-          console.error('Lỗi khi xóa lớp học:', err);
-          message.error('Có lỗi xảy ra khi xóa lớp học.');
-        }
-      },
-    });
+  const handleDelete = async (record: Class) => {
+    if (record.id) {
+      await deleteClass(record.id);
+      message.success('Class deleted');
+    } else {
+      message.error('Could not find class ID to delete.');
+    }
   };
 
-  const columns: ColumnsType<Class> = [
-    { title: 'ID', dataIndex: 'id', key: 'id' }, // Hiển thị ID cho quản lý
-    { title: 'Tên lớp', dataIndex: 'className', key: 'className' },
-    { title: 'Năm học', dataIndex: 'schoolYear', key: 'schoolYear' },
-    { title: 'Học kỳ', dataIndex: 'semester', key: 'semester' },
-    { title: 'Giáo viên', dataIndex: 'fullName', key: 'fullName' },
+  const columns: ColumnsType<Class & { subjectName: string; fullName: string }> = [
+    { title: 'ID', dataIndex: 'id', key: 'id' },
+    { title: 'Class Name', dataIndex: 'className', key: 'className' },
+    { title: 'Subject', dataIndex: 'subjectName', key: 'subjectName' },
+    { title: 'School Year', dataIndex: 'schoolYear', key: 'schoolYear' },
+    { title: 'Semester', dataIndex: 'semester', key: 'semester' },
+    { title: 'Teacher', dataIndex: 'fullName', key: 'fullName' },
     {
-      title: 'Hành động',
+      title: 'Actions',
       key: 'actions',
       render: (_, record) => (
         <Dropdown
           trigger={['click']}
-          overlay={
-            <Menu>
-              <Menu.Item key="edit" onClick={() => showModal(record)}>Chỉnh sửa</Menu.Item>
-              <Menu.Item key="delete" danger onClick={() => handleDelete(record)}>Xóa</Menu.Item>
-              <Menu.Item key="students">Danh sách học sinh</Menu.Item>
-              <Menu.Item key="assignments">Danh sách bài tập</Menu.Item>
-            </Menu>
-          }
+          menu={{
+            items: [
+              { key: 'edit', label: 'Edit', onClick: () => showModal(record) },
+              {
+                key: 'delete',
+                label: (
+                  <Popconfirm
+                    title="Confirm class deletion"
+                    description={`Are you sure you want to delete: ${record.className}?`}
+                    okText="Delete"
+                    okType="danger"
+                    cancelText="Cancel"
+                    onConfirm={() => handleDelete(record)}
+                  >
+                    <span style={{ color: 'red' }}>Delete</span>
+                  </Popconfirm>
+                ),
+              },
+              { key: 'students', label: 'Student List' },
+              { key: 'assignments', label: 'Assignments' },
+            ],
+          }}
         >
           <Button type="text" icon={<MoreOutlined />} />
         </Dropdown>
@@ -152,91 +191,88 @@ const ClassManagementPage: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16
-      }}>
-        <Title level={3} style={{ margin: 0 }}>Quản lý Lớp học</Title>
-        <Button 
-          type="default" 
-          icon={<PlusOutlined />} 
-          onClick={() => showModal()}
-          loading={isCreating} // Hiển thị loading khi đang tạo
-        >
-          Thêm lớp học
-        </Button>
-      </div>
+      <Title level={3} style={{ marginBottom: 24 }}>Class Management</Title>
 
-      {/* Card chứa bảng */}
+      <Card style={{ marginBottom: 24 }}>
+        <Space>
+          <BookOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+          <div>
+            <Text strong>Total Classes:</Text>{' '}
+            <Text type="secondary">{classes?.length}</Text>
+          </div>
+        </Space>
+      </Card>
+
       <Card>
-        <div style={{ marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0 }}>Danh sách Lớp học</Title>
-          <Text type="secondary">Quản lý tất cả các lớp học trong trường.</Text>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Input.Search
+            placeholder="Search class by name"
+            style={{ width: 250 }}
+            allowClear
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          <Button type="default" icon={<PlusOutlined />} onClick={() => showModal()} loading={isCreating}>
+            Add Class
+          </Button>
         </div>
+
         <Table
           columns={columns}
-          dataSource={classes || []} // Đảm bảo dataSource là mảng rỗng nếu chưa có dữ liệu
+          dataSource={classesWithNames}
           rowKey="id"
           pagination={{ pageSize: 7 }}
-          loading={isLoading || isDeleting} // Thêm loading cho bảng khi đang fetch hoặc xóa
+          loading={isLoading || isDeleting}
         />
       </Card>
 
-      {/* Modal Form */}
       <Modal
-        title={editingClass ? 'Chỉnh sửa lớp học' : 'Thêm lớp học mới'}
+        title={editingClass ? 'Edit Class' : 'Add New Class'}
         open={isModalVisible}
         onCancel={handleCancel}
         onOk={() => form.submit()}
-        okText={editingClass ? 'Cập nhật' : 'Thêm mới'}
-        cancelText="Hủy"
-        okType='default'
-        confirmLoading={isCreating || isUpdating} // Hiển thị loading cho nút OK khi đang tạo/cập nhật
+        okText={editingClass ? 'Update' : 'Create'}
+        cancelText="Cancel"
+        okType="default"
+        confirmLoading={isCreating || isUpdating}
       >
         <Form
           layout="vertical"
           form={form}
           onFinish={handleFinish}
-          initialValues={{ schoolYear: dayjs().year() }} // Set năm học mặc định là năm hiện tại
+          initialValues={{ schoolYear: dayjs().year(), semester: '' }}
         >
-          <Form.Item
-            label="Tên lớp học"
-            name="className"
-            rules={[{ required: true, message: 'Vui lòng nhập tên lớp' }]}
-          >
+          <Form.Item label="Class Name" name="className" rules={[{ required: true, message: 'Please enter class name' }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            label="Năm học"
-            name="schoolYear"
-            rules={[{ required: true, message: 'Vui lòng nhập năm học' }]}
-          >
+          <Form.Item label="Description" name="description" rules={[{ required: true, message: 'Please enter class description' }]}>
+            <Input.TextArea rows={3} />
+          </Form.Item>
+
+          <Form.Item label="School Year" name="schoolYear" rules={[{ required: true, message: 'Please enter school year' }]}>
             <InputNumber min={1900} max={2100} style={{ width: '100%' }} />
           </Form.Item>
 
-          <Form.Item
-            label="Học kỳ"
-            name="semester"
-            rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}
-          >
-            <Select placeholder="Chọn học kỳ">
-              <Option value="Học kỳ 1">Học kỳ 1</Option>
-              <Option value="Học kỳ 2">Học kỳ 2</Option>
-              <Option value="Hè">Hè</Option>
+          <Form.Item label="Semester" name="semester" rules={[{ required: true, message: 'Please select semester' }]}>
+            <Radio.Group>
+              <Radio value="Semester 1">Semester 1</Radio>
+              <Radio value="Semester 2">Semester 2</Radio>
+              <Radio value="Summer">Summer</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item label="Subject" name="subjectId" rules={[{ required: true, message: 'Please select subject' }]}>
+            <Select placeholder="Select subject">
+              {subjects.map(sub => <Option key={sub.id} value={sub.id}>{sub.subjectName}</Option>)}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            label="Giáo viên phụ trách (ID)"
-            name="teacherId"
-            rules={[{ required: true, message: 'Vui lòng nhập ID giáo viên' }]}
-          >
-            <InputNumber min={1} style={{ width: '100%' }} />
-            
+          <Form.Item label="Teacher" name="teacherId" rules={[{ required: true, message: 'Please select teacher' }]}>
+            <Select placeholder="Select teacher">
+              {Array.from(teacherMap.entries()).map(([id, name]) => (
+                <Option key={id} value={id}>{name}</Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

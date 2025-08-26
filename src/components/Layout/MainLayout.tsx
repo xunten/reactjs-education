@@ -1,30 +1,32 @@
-import React, { useCallback, useState } from "react";
-import { Layout } from "antd";
-import Sidebar from "./Sidebar";
-import AppHeader from "./Header";
+import React, { useCallback, useState, Suspense, lazy } from "react";
+import { Layout, Spin } from "antd";
 import { Outlet } from "react-router-dom";
+
+// Tải động các component
+const Sidebar = lazy(() => import("./Sidebar"));
+const AppHeader = lazy(() => import("./Header"));
 
 const { Content } = Layout;
 
 const MainLayout: React.FC = () => {
-  // Desktop mặc định mở; mobile sẽ auto collapse khi breakpoint "lg" kích hoạt
   const [collapsed, setCollapsed] = useState(false);
 
   const toggleSidebar = useCallback(() => setCollapsed((c) => !c), []);
   const handleBreakpoint = useCallback((broken: boolean) => {
-    // Khi xuống < lg, tự thu gọn; khi lên >= lg mở lại
     setCollapsed(broken);
   }, []);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sidebar collapsed={collapsed} onToggle={toggleSidebar} onBreakpoint={handleBreakpoint} />
-      <Layout>
-        <AppHeader collapsed={collapsed} onToggle={toggleSidebar} />
-        <Content style={{ margin: "16px" }}>
-          <Outlet />
-        </Content>
-      </Layout>
+      <Suspense fallback={<Spin size="large" style={{ margin: 'auto', display: 'block', padding: '50px' }} />}>
+        <Sidebar collapsed={collapsed} onToggle={toggleSidebar} onBreakpoint={handleBreakpoint} />
+        <Layout>
+          <AppHeader collapsed={collapsed} onToggle={toggleSidebar} />
+          <Content style={{ margin: "16px" }}>
+            <Outlet />
+          </Content>
+        </Layout>
+      </Suspense>
     </Layout>
   );
 };

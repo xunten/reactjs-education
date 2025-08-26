@@ -20,18 +20,22 @@ const LoginPage: React.FC = () => {
 
       const { token, user: authUser }: AuthResponse = await apiLogin(payload);
       console.log('Phản hồi từ API:', authUser);
-      
+
       const appUser: User = {
-          id: authUser.id,
-          username: authUser.username,
-          fullName: authUser.fullName,
-          email: authUser.email,
-          roles: authUser.roles,
+        id: authUser.id,
+        username: authUser.username,
+        full_name: authUser.fullName,
+        email: authUser.email,
+        roles: authUser.roles.map((role: string, index: number) => ({
+          id: index,       // Nếu API không trả id, bạn có thể tạm tạo id
+          name: role,
+        })),
       };
 
-      authContextLogin(token, appUser); // Truyền đối tượng đã được ánh xạ
 
-      const hasAccess = appUser.roles?.includes("admin");
+      authContextLogin(token, appUser); 
+
+      const hasAccess = appUser.roles.some(r => r.name === "admin");
 
       if (hasAccess) {
         messageApi.success("Đăng nhập thành công");

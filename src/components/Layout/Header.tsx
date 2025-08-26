@@ -1,7 +1,22 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Layout, Space, Button, Dropdown, Breadcrumb, Input, theme, Typography } from "antd";
-import { MenuFoldOutlined, MenuUnfoldOutlined, BulbOutlined, UserOutlined, LogoutOutlined } from "@ant-design/icons";
+import {
+  Layout,
+  Space,
+  Button,
+  Dropdown,
+  Breadcrumb,
+  Input,
+  theme,
+  Typography,
+} from "antd";
+import {
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  BulbOutlined,
+  UserOutlined,
+  LogoutOutlined,
+} from "@ant-design/icons";
 import { ThemeContext } from "../ThemeContext";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -14,47 +29,57 @@ type AppHeaderProps = {
   onToggle: () => void;
 };
 
-const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggle }) => {
+// Sử dụng React.memo để tránh re-render không cần thiết
+const AppHeader: React.FC<AppHeaderProps> = memo(({ collapsed, onToggle }) => {
   const {
-    token: { colorBgContainer },
+    token: { colorBgContainer, colorText, colorIcon },
   } = theme.useToken();
+
   const { toggleTheme } = React.useContext(ThemeContext);
-  const { logout, user } = useAuth(); // ✅ lấy user từ AuthContext
+  const { logout, user } = useAuth();
   const location = useLocation();
 
   const pathnames = location.pathname.split("/").filter(Boolean);
 
   const breadcrumbItems = useMemo(() => {
     const items: { title: React.ReactNode }[] = [
-      { title: <Link to="/dashboard">Dashboard</Link> },
+      {
+        title: (
+          <Link to="/dashboard" style={{ color: colorText }}>
+            Dashboard
+          </Link>
+        ),
+      },
     ];
     pathnames.forEach((value, index) => {
       const href = `/${pathnames.slice(0, index + 1).join("/")}`;
       items.push({
         title: (
-          <Link to={href}>
-            {value.charAt(0).toUpperCase() + value.slice(1)}
+          <Link to={href} style={{ color: colorText }}>
+            <Text strong style={{ color: colorText }}>
+              {value.charAt(0).toUpperCase() + value.slice(1)}
+            </Text>
           </Link>
         ),
       });
     });
     return items;
-  }, [pathnames]);
+  }, [pathnames, colorText]);
 
   const handleSearch = useCallback((v: string) => {
-    console.log("Đang tìm kiếm:", v);
+    console.log("Searching:", v);
   }, []);
 
   const userDropdownMenuItems = useMemo(
     () => [
       {
         key: "logout",
-        icon: <LogoutOutlined />,
-        label: "Đăng xuất",
+        icon: <LogoutOutlined style={{ color: colorIcon }} />,
+        label: "Logout",
         onClick: () => logout(),
       },
     ],
-    [logout]
+    [logout, colorIcon]
   );
 
   return (
@@ -72,7 +97,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggle }) => {
         <Button
           type="text"
           onClick={onToggle}
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          icon={
+            collapsed ? (
+              <MenuUnfoldOutlined style={{ color: colorIcon }} />
+            ) : (
+              <MenuFoldOutlined style={{ color: colorIcon }} />
+            )
+          }
           style={{ fontSize: 16 }}
           aria-label="Toggle sidebar"
         />
@@ -81,7 +112,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggle }) => {
 
       <Space size="middle" align="center">
         <Search
-          placeholder="Tìm kiếm..."
+          placeholder="Search..."
           onSearch={handleSearch}
           allowClear
           style={{ width: 240, verticalAlign: "middle" }}
@@ -89,22 +120,27 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggle }) => {
         <Button
           type="text"
           onClick={toggleTheme}
-          icon={<BulbOutlined style={{ fontSize: 18 }} />}
+          icon={<BulbOutlined style={{ fontSize: 18, color: colorIcon }} />}
         />
         <Dropdown menu={{ items: userDropdownMenuItems }} placement="bottomRight" arrow>
           <Space
             style={{
               padding: "0 8px",
               cursor: "pointer",
+              display: "flex",
+              whiteSpace: "nowrap",
+              color: colorText,
             }}
           >
-            <UserOutlined style={{ fontSize: 18 }} />
-            <Text strong>{user?.username || user?.email}</Text>
+            <UserOutlined style={{ fontSize: 18, color: colorIcon }} />
+            <Text strong style={{ color: colorText }}>
+              {user?.username || user?.email}
+            </Text>
           </Space>
         </Dropdown>
       </Space>
     </AntHeader>
   );
-};
+});
 
 export default AppHeader;

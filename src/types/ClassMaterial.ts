@@ -2,11 +2,15 @@ export interface ClassMaterial {
     id: number;
     title: string;
     className: string;
-    file_path: string;
-    file_type: string;
+    filePath: string;
+    fileType: string;
     createdBy: string;
-    created_at: Date;
-    updated_at?: Date;
-    classID: number;
+    createdAt: Date;
+    updatedAt?: Date;
+    classId: number;
     downloadCount?: number;
+}
+export interface Class {
+  id: number;
+  className: string;
 }

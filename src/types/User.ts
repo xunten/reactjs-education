@@ -1,12 +1,15 @@
+export interface Role {
+  id: number;
+  name: string;
+}
 
 export interface User {
   id: number;
   username: string;
   email: string;
-  fullName: string;
+  full_name: string;
   imageUrl?: string;
-  roles: string[];
-  isActive?: boolean;
+  roles: Role[];
   createdAt?: string;
   updatedAt?: string;
 }

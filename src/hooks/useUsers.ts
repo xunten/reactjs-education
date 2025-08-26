@@ -45,9 +45,11 @@ export const useCreateUser = () => {
 // Hook xóa người dùng (Optimistic Update)
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, number>({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return useMutation<void, any, number>({
     mutationFn: deleteUser,
     onMutate: async (userId) => {
+      if (!userId) return; // tránh undefined
       await queryClient.cancelQueries({ queryKey: ['users'] });
       const previousUsers = queryClient.getQueryData<User[]>(['users']);
       queryClient.setQueryData<User[]>(['users'], (old) =>
@@ -55,13 +57,18 @@ export const useDeleteUser = () => {
       );
       return { previousUsers };
     },
-    onError: (err, _, context) => {
+    onError: (err, _userId, context) => {
       const ctx = context as { previousUsers?: User[] } | undefined;
       queryClient.setQueryData(['users'], ctx?.previousUsers);
-      message.error(err.message || 'Xóa người dùng thất bại');
+      // Kiểm tra lỗi FK constraint
+      if (err?.response?.data?.errors?.[0]?.includes("foreign key")) {
+        message.error("Không thể xóa user này vì đang có liên kết với lớp học");
+      } else {
+        message.error(err.message || "Xóa người dùng thất bại");
+      }
     },
     onSuccess: () => {
-      message.success('Xóa người dùng thành công');
+      message.success("Xóa người dùng thành công");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
