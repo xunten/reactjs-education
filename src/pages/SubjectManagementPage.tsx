@@ -1,10 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Card, Table, Typography, Button, Space, Row, Col, Input, Modal, Form, Popconfirm } from 'antd';
+import {  Card,
+  Table, Typography, Button, Space, Row, Col, Input, Modal, Form, Popconfirm, Tooltip,
+} from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, BookOutlined } from '@ant-design/icons';
 import type { Subject } from '../types';
-import { useSubjects, useCreateSubject, useUpdateSubject, useDeleteSubject } from '../hooks/useSubjects';
+import {  useSubjects, useCreateSubject, useUpdateSubject, useDeleteSubject,
+} from '../hooks/useSubjects';
 import dayjs from 'dayjs';
 import { useDebounce } from 'use-debounce';
+import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -30,25 +34,31 @@ const SubjectManagementPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
-  // ✅ Handlers bọc useCallback để tránh re-create mỗi lần render
+  // Handlers
   const handleAddSubject = useCallback(() => {
     setEditingSubject(null);
     form.resetFields();
     setIsModalVisible(true);
   }, [form]);
 
-  const handleEditSubject = useCallback((subject: Subject) => {
-    setEditingSubject(subject);
-    form.setFieldsValue(subject);
-    setIsModalVisible(true);
-  }, [form]);
+  const handleEditSubject = useCallback(
+    (subject: Subject) => {
+      setEditingSubject(subject);
+      form.setFieldsValue(subject);
+      setIsModalVisible(true);
+    },
+    [form]
+  );
 
-  const handleDeleteSubject = useCallback((subjectId: number) => {
-    deleteSubject.mutate(subjectId);
-  }, [deleteSubject]);
+  const handleDeleteSubject = useCallback(
+    (subjectId: number) => {
+      deleteSubject.mutate(subjectId);
+    },
+    [deleteSubject]
+  );
 
   const handleSave = useCallback(() => {
-    form.validateFields().then(values => {
+    form.validateFields().then((values) => {
       if (editingSubject) {
         updateSubject.mutate({ subjectId: editingSubject.id, subjectData: values });
       } else {
@@ -59,24 +69,44 @@ const SubjectManagementPage: React.FC = () => {
     });
   }, [editingSubject, updateSubject, createSubject, form]);
 
-  // ✅ Columns chỉ tạo 1 lần nhờ useMemo
-  const columns = useMemo(
+  // columns typed explicitly
+  const columns: ColumnsType<Subject> = useMemo(
     () => [
-      { title: 'Subject Name', dataIndex: 'subjectName', key: 'subjectName' },
-      { title: 'Description', dataIndex: 'description', key: 'description' },
+      {
+        title: 'Subject Name',
+        dataIndex: 'subjectName',
+        key: 'subjectName',
+        render: (text: string) => (
+          <Space>
+            <BookOutlined style={{ color: '#1677ff' }} />
+            <span>{text}</span>
+          </Space>
+        ),
+        ellipsis: true,
+      },
+      {
+        title: 'Description',
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+      },
       {
         title: 'Created At',
         dataIndex: 'createdAt',
         key: 'createdAt',
-        render: (createdAt: string) => dayjs(createdAt).format('DD/MM/YYYY HH:mm:ss'),
+        render: (createdAt: string) => dayjs(createdAt).format('DD/MM/YYYY HH:mm'),
+        width: 180,
       },
       {
         title: 'Actions',
         key: 'action',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        render: (_: any, record: Subject) => (
+        align: 'center',
+        width: 120,
+        render: (_, record: Subject) => (
           <Space size="middle">
-            <Button icon={<EditOutlined />} onClick={() => handleEditSubject(record)} />
+            <Tooltip title="Edit subject">
+              <Button icon={<EditOutlined />} onClick={() => handleEditSubject(record)} size="small" />
+            </Tooltip>
             <Popconfirm
               title="Are you sure you want to delete this subject?"
               onConfirm={() => handleDeleteSubject(record.id)}
@@ -84,7 +114,9 @@ const SubjectManagementPage: React.FC = () => {
               okType="danger"
               cancelText="No"
             >
-              <Button icon={<DeleteOutlined />} danger />
+              <Tooltip title="Delete subject">
+                <Button icon={<DeleteOutlined />} danger size="small" />
+              </Tooltip>
             </Popconfirm>
           </Space>
         ),
@@ -93,12 +125,11 @@ const SubjectManagementPage: React.FC = () => {
     [handleEditSubject, handleDeleteSubject]
   );
 
-  // ✅ Search có debounce
-  const filteredSubjects = useMemo(() => {
-    return subjects.filter(s =>
-      removeVietnameseTones(s.subjectName)
-        .toLowerCase()
-        .includes(removeVietnameseTones(debouncedSearchTerm).toLowerCase())
+  // filteredSubjects typed explicitly
+  const filteredSubjects: Subject[] = useMemo(() => {
+    const q = removeVietnameseTones(debouncedSearchTerm).toLowerCase();
+    return subjects.filter((s) =>
+      removeVietnameseTones(s.subjectName).toLowerCase().includes(q)
     );
   }, [subjects, debouncedSearchTerm]);
 
@@ -106,18 +137,23 @@ const SubjectManagementPage: React.FC = () => {
     <div style={{ padding: 24 }}>
       {/* Header */}
       <Title level={2} style={{ marginBottom: 16 }}>
-        📚 Subject Management
+        <Space>
+          <BookOutlined style={{ color: '#0779f4' }} />
+          <span>Subject Management</span>
+        </Space>
       </Title>
 
       {/* Thống kê */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={24}>
-          <Card style={{ background: '#fafafa' }}>
-            <Space align="center">
-              <BookOutlined style={{ fontSize: 32, color: '#1677ff' }} />
+      <Row style={{ marginBottom: 24 }} gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={8} lg={6}>
+          <Card>
+            <Space>
+              <BookOutlined style={{ fontSize: 24, color: '#0779f4' }} />
               <div>
-                <Text strong>Total Subjects</Text>
-                <Title level={3} style={{ margin: 0 }}>
+                <Text strong style={{ fontSize: 16 }}>
+                  Total Subjects
+                </Text>
+                <Title level={3} style={{ color: '#0779f4', margin: 0 }}>
                   {subjects.length}
                 </Title>
               </div>
@@ -130,29 +166,31 @@ const SubjectManagementPage: React.FC = () => {
       <Card
         title={<Text strong style={{ fontSize: 16 }}>Subject List</Text>}
         extra={
-          <Button type="default" icon={<PlusOutlined />} onClick={handleAddSubject}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSubject}>
             Add New Subject
           </Button>
         }
       >
         <Row justify="space-between" style={{ marginBottom: 16 }}>
-          <Col>
+          <Col xs={24} sm={12} md={8} lg={6}>
             <Search
               placeholder="Search subject..."
-              style={{ width: 300 }}
+              style={{ width: '100%' }}
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               allowClear
             />
           </Col>
         </Row>
 
-        <Table
+        {/* Table with explicit generic and proper rowKey */}
+        <Table<Subject>
           columns={columns}
           dataSource={filteredSubjects}
-          rowKey="id"
+          rowKey={(record) => String(record.id)}
           loading={isLoading}
-          pagination={{ pageSize: 7 }} // 👉 sau này có thể đổi sang server-side
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
@@ -164,7 +202,7 @@ const SubjectManagementPage: React.FC = () => {
         onOk={handleSave}
         onCancel={() => setIsModalVisible(false)}
         okText="Save"
-        okType="default"
+        okType="primary"
         cancelText="Cancel"
       >
         <Form form={form} layout="vertical" initialValues={editingSubject || {}}>
@@ -173,14 +211,14 @@ const SubjectManagementPage: React.FC = () => {
             label="Subject Name"
             rules={[{ required: true, message: 'Please enter subject name!' }]}
           >
-            <Input />
+            <Input prefix={<BookOutlined />} />
           </Form.Item>
           <Form.Item
             name="description"
             label="Description"
             rules={[{ required: true, message: 'Please enter description!' }]}
           >
-            <Input.TextArea />
+            <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>

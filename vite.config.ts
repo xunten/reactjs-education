@@ -7,11 +7,10 @@ import { visualizer } from 'rollup-plugin-visualizer';
 export default defineConfig({
   plugins: [
     react(),
-    // Nén các file tĩnh (js, css, html) thành .gz và .br
     viteCompression({
       verbose: true,
       disable: false,
-      threshold: 10240, // Chỉ nén các file có kích thước > 10KB
+      threshold: 10240,
       algorithm: 'gzip',
       ext: '.gz',
     }),
@@ -22,7 +21,6 @@ export default defineConfig({
       algorithm: 'brotliCompress',
       ext: '.br',
     }),
-    // Phân tích bundle để tìm các thư viện lớn
     visualizer({
       filename: './dist/report.html',
       open: true,
@@ -30,6 +28,14 @@ export default defineConfig({
       brotliSize: true,
     }),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080', // BE Spring Boot, hỗ trợ tải file
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     minify: 'terser',
     terserOptions: {
@@ -40,7 +46,6 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Tối ưu hóa code splitting bằng cách nhóm các thư viện lớn
         manualChunks(id) {
           if (id.includes('node_modules')) {
             const moduleName = id.split('node_modules/')[1].split('/')[0];

@@ -1,45 +1,12 @@
-export interface SchedulePattern {
+export interface ClassScheduleSession {
   id: number;
   classId: number;
-  dayOfWeek: number;     
-  startTime: string;     
-  endTime: string;       
-  userId: number;         
+  patternId: number;
+  startPeriod: number;
+  endPeriod: number;
+  sessionDate: string;
   location: string;
+  note?: string;
+  status: 'CANCELLED' | 'COMPLETED' | 'HOLIDAY' | 'MAKEUP' | 'SCHEDULED';
+  submittedAt?: string;
 }
-
-// Khi tạo pattern mới
-export interface SchedulePatternCreateDTO {
-  classId: number;
-  dayOfWeek: number;
-  startTime: string;
-  endTime: string;
-  userId: number;
-  location: string;
-}
-
-export interface SchedulePatternUpdateDTO {
-  patterns: SchedulePatternCreateDTO[];
-}
-
-// Khi update nhiều pattern cùng lúc
-export interface SchedulePatternSingleUpdateDTO {
-  id: number;
-  dayOfWeek?: number;
-  startTime?: string;
-  endTime?: string;
-  userId?: number;
-  location?: string;
-}
-
-// Buổi học thực tế
-export interface ScheduleSession {
-  id: number;
-  classId: number;
-  startTime: string; 
-  endTime: string;
-  userId: number;
-  location: string;
-}
-
-export type ClassScheduleSessionResponseDTO = ScheduleSession;

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, memo } from "react";
+import React, { useMemo, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Layout,
@@ -6,7 +6,6 @@ import {
   Button,
   Dropdown,
   Breadcrumb,
-  Input,
   theme,
   Typography,
 } from "antd";
@@ -17,11 +16,10 @@ import {
   UserOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
-import { ThemeContext } from "../ThemeContext";
+import { ThemeContext } from "../../context/ThemeContext";
 import { useAuth } from "../../hooks/useAuth";
 
 const { Header: AntHeader } = Layout;
-const { Search } = Input;
 const { Text } = Typography;
 
 type AppHeaderProps = {
@@ -66,9 +64,6 @@ const AppHeader: React.FC<AppHeaderProps> = memo(({ collapsed, onToggle }) => {
     return items;
   }, [pathnames, colorText]);
 
-  const handleSearch = useCallback((v: string) => {
-    console.log("Searching:", v);
-  }, []);
 
   const userDropdownMenuItems = useMemo(
     () => [
@@ -111,12 +106,7 @@ const AppHeader: React.FC<AppHeaderProps> = memo(({ collapsed, onToggle }) => {
       </Space>
 
       <Space size="middle" align="center">
-        <Search
-          placeholder="Search..."
-          onSearch={handleSearch}
-          allowClear
-          style={{ width: 240, verticalAlign: "middle" }}
-        />
+      
         <Button
           type="text"
           onClick={toggleTheme}

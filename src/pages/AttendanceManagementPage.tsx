@@ -1,107 +1,136 @@
 import React, { useState } from 'react';
-import { Card, Table, Typography, Button, Space, Tag, Select, DatePicker, Dropdown, Menu, message } from 'antd';
-import { SyncOutlined, MoreOutlined, EditOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
+import {
+  Card,
+  Table,
+  Typography,
+  Button,
+  Space,
+  Tag,
+  Select,
+  DatePicker,
+  message,
+  Spin,
+} from 'antd';
+import { SyncOutlined, DownloadOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import { useAttendances } from '../hooks/useAttendances';
+import { useSchedules } from '../hooks/useSchedules';
+import { useAttendancesBySession } from '../hooks/useAttendances';
 import type { Attendance } from '../types/Attendance';
+import type { ClassScheduleSession } from '../types/Schedule';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useClasses } from '../hooks/useClasses';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const getStatusTag = (status: Attendance['status']) => {
   switch (status) {
-    case 'Present':
-      return <Tag color="green">Có mặt</Tag>;
-    case 'Absent':
-      return <Tag color="red">Vắng</Tag>;
-    case 'Late':
-      return <Tag color="gold">Đi muộn</Tag>;
+    case 'PRESENT':
+      return <Tag color="green">Present</Tag>;
+    case 'ABSENT':
+      return <Tag color="red">Absent</Tag>;
+    case 'LATE':
+      return <Tag color="gold">Late</Tag>;
+    case 'EXCUSED':
+      return <Tag color="blue">Excused</Tag>;
     default:
       return <Tag>{status}</Tag>;
   }
 };
 
 const AttendanceManagementPage: React.FC = () => {
-  const [selectedClass, setSelectedClass] = useState<string | undefined>();
+  const [selectedClassId, setSelectedClassId] = useState<number | undefined>();
+  const [selectedSession, setSelectedSession] = useState<number | undefined>();
   const [selectedDate, setSelectedDate] = useState<moment.Moment | null>(null);
 
-  const { data: attendances, isLoading, isError, refetch } = useAttendances();
+  // Get class list
+  const { classes, isLoading: loadingClasses } = useClasses();
 
-  if (isError) message.error('Lỗi khi lấy dữ liệu điểm danh');
+  // Get sessions by class
+  const { schedules, isLoading: loadingSchedules } = useSchedules(selectedClassId);
 
-  // Lọc dữ liệu theo class + date
+  // Get attendance by session
+  const {
+    data: attendances,
+    isLoading: loadingAttendances,
+    isError,
+    refetch,
+  } = useAttendancesBySession(selectedSession ?? 0);
+
+  if (isError) message.error('Error while fetching attendance data');
+
+  // Filter by date (if selected)
   const filteredData: Attendance[] =
-    attendances?.filter(item => {
-      const matchesClass = !selectedClass || item.className === selectedClass;
-      const matchesDate = !selectedDate || moment.utc(item.markedAt).isSame(selectedDate, 'day');
-      return matchesClass && matchesDate;
-    }) ?? [];
+    attendances?.filter((item) =>
+      selectedDate
+        ? moment.utc(item.markedAt).format('YYYY-MM-DD') === selectedDate.format('YYYY-MM-DD')
+        : true
+    ) ?? [];
 
-  // Làm mới
+
+  const sessionMap = new Map(
+    schedules?.map((s: ClassScheduleSession) => [s.id, s.classId]) ?? []
+  );
+
+  const classMap = new Map(classes?.map((c) => [c.id, c.className]) ?? []);
+
+  // Enrich attendance data with className
+  const enrichedData: (Attendance & { className?: string })[] = filteredData.map((a) => {
+    const session = sessionMap.get(a.sessionId);
+    return {
+      ...a,
+      className: session ? classMap.get(session) ?? 'N/A' : 'N/A',
+    };
+  });
+
+  // Refresh
   const handleRefresh = () => {
-    setSelectedClass(undefined);
-    setSelectedDate(null);
     refetch();
   };
 
-  // Xuất Excel
+  // Export Excel
   const handleExport = () => {
-    if (filteredData.length === 0) {
-      message.warning('Không có dữ liệu để xuất.');
+    if (enrichedData.length === 0) {
+      message.warning('No data to export.');
       return;
     }
 
-    const formattedData = filteredData.map(item => ({
-      'Tên Học sinh': item.studentName ?? item.fullName,
-      'Lớp học': item.className,
-      'Trạng thái': item.status,
-      'Ngày điểm danh': moment.utc(item.markedAt).format('DD/MM/YYYY HH:mm'),
+    const formattedData = enrichedData.map((record) => ({
+      'Student Name': record.studentName,
+      'Class': record.className,
+      'Status': record.status,
+      'Marked At': moment.utc(record.markedAt).format('DD/MM/YYYY HH:mm'),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
     const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(data, 'bao-cao-diem-danh.xlsx');
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    const className = classes?.find(c => c.id === selectedClassId)?.className ?? 'Attendance';
+    saveAs(blob, `Attendance-Report-Class ${className}.xlsx`);
   };
 
   const columns = [
-    { title: 'Tên Học sinh', dataIndex: 'fullName', key: 'fullName' },
-    { title: 'Lớp học', dataIndex: 'className', key: 'className' },
+    { title: 'Student Name', dataIndex: 'studentName', key: 'studentName' },
+    { title: 'Class', dataIndex: 'className', key: 'className' },
     {
-      title: 'Trạng thái',
+      title: 'Status',
       dataIndex: 'status',
       key: 'status',
       render: (status: Attendance['status']) => getStatusTag(status),
     },
     {
-      title: 'Ngày điểm danh',
+      title: 'Marked At',
       dataIndex: 'markedAt',
       key: 'markedAt',
       render: (date: string) => moment.utc(date).format('DD/MM/YYYY HH:mm'),
     },
     {
-      title: 'Hành động',
-      key: 'actions',
-      render: () => (
-        <Dropdown
-          overlay={
-            <Menu>
-              <Menu.Item key="edit" icon={<EditOutlined />}>
-                Chỉnh sửa trạng thái
-              </Menu.Item>
-              <Menu.Item key="view" icon={<EyeOutlined />}>
-                Xem chi tiết
-              </Menu.Item>
-            </Menu>
-          }
-          trigger={['click']}
-        >
-          <Button icon={<MoreOutlined />} />
-        </Dropdown>
-      ),
+      title: 'Note',
+      dataIndex: 'note',
+      key: 'note',
+      render: (note: string | null) => note ?? '-',
     },
   ];
 
@@ -116,7 +145,7 @@ const AttendanceManagementPage: React.FC = () => {
         }}
       >
         <Title level={2} style={{ margin: 0 }}>
-          Quản lý Điểm danh
+          Attendance Management
         </Title>
       </div>
 
@@ -126,61 +155,83 @@ const AttendanceManagementPage: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
             marginBottom: 16,
           }}
         >
-          <div>
+          <div style={{ minWidth: 200, marginBottom: 8 }}>
             <Title level={4} style={{ margin: 0 }}>
-              Điểm danh
+              Attendance Records
             </Title>
-            <Text type="secondary">Xem và quản lý hồ sơ điểm danh của học sinh.</Text>
+            <Text type="secondary">View and manage student attendance records.</Text>
           </div>
-          <Space>
+          <Space style={{ flexWrap: 'wrap', marginBottom: 8 }}>
             <Button type="default" icon={<SyncOutlined />} onClick={handleRefresh}>
-              Làm mới
+              Refresh
             </Button>
             <Button type="default" icon={<DownloadOutlined />} onClick={handleExport}>
-              Xuất Excel
+              Export Excel
             </Button>
           </Space>
         </div>
 
-        {/* Bộ lọc */}
-        <Space style={{ marginBottom: 16, flexWrap: 'wrap' }}>
-          <Select
-            placeholder="Tất cả lớp"
-            style={{ width: 180 }}
-            value={selectedClass}
-            onChange={setSelectedClass}
-            allowClear
-          >
-            {attendances
-              ?.map(a => a.className)
-              .filter((v, i, arr) => v && arr.indexOf(v) === i)
-              .map(c => (
-                <Option key={c} value={c}>
-                  {c}
+        {/* Filters */}
+        <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+          <Space style={{ flexWrap: 'wrap' }}>
+            <Select
+              placeholder="Select class"
+              style={{ minWidth: 200 }}
+              value={selectedClassId}
+              onChange={setSelectedClassId}
+              loading={loadingClasses}
+              allowClear
+            >
+              {classes?.map((c) => (
+                <Option key={c.id} value={c.id}>
+                  {c.className}
                 </Option>
               ))}
-          </Select>
+            </Select>
 
-          <DatePicker
-            placeholder="Chọn ngày"
-            style={{ width: 180 }}
-            value={selectedDate}
-            onChange={setSelectedDate}
-          />
-        </Space>
+            <Select
+              placeholder="Select session"
+              style={{ minWidth: 300 }}
+              value={selectedSession}
+              onChange={setSelectedSession}
+              loading={loadingSchedules}
+              allowClear
+              disabled={!selectedClassId}
+            >
+              {schedules?.map((s: ClassScheduleSession) => (
+                <Option key={s.id} value={s.id}>
+                  {`Date ${moment(s.sessionDate).format('DD/MM/YYYY')} - Period ${s.startPeriod}-${s.endPeriod} (${s.location})`}
+                </Option>
+              ))}
+            </Select>
 
-        {/* Bảng */}
-        <Table
-          columns={columns}
-          dataSource={filteredData}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{ pageSize: 7 }}
-        />
+            <DatePicker
+              placeholder="Select date"
+              style={{ minWidth: 180 }}
+              value={selectedDate}
+              onChange={setSelectedDate}
+            />
+          </Space>
+        </div>
+
+        {/* Table */}
+        <Spin spinning={loadingAttendances}>
+          <div style={{ overflowX: 'auto' }}>
+            <Table
+              columns={columns}
+              dataSource={enrichedData}
+              rowKey="id"
+              pagination={{ pageSize: 7 }}
+              scroll={{ x: 'max-content' }} // cho bảng scroll ngang khi nhỏ màn hình
+            />
+          </div>
+        </Spin>
       </Card>
+
     </div>
   );
 };

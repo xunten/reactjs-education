@@ -1,219 +1,229 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  Card,
-  Table,
-  Typography,
-  Button,
-  Space,
-  Row,
-  Col,
-  Input,
-  Spin,
-  Alert,
-  Modal,
-  Form,
-  InputNumber,
-  DatePicker,
-} from 'antd';
+  Card, Table, Typography, Button, Modal, Spin, Dropdown, Col, Row, Space,
+} from "antd";
 import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  FileTextOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons';
-import { useQuizzes } from '../hooks/useQuizzes';
-import type { Quiz } from '../types';
-import dayjs from 'dayjs';
+  CheckCircleOutlined, ClockCircleOutlined, FileTextOutlined,
+  MoreOutlined, TeamOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import type { ColumnsType } from "antd/es/table";
+
+import { useQuizzes } from "../hooks/useQuizzes";
+import { useQuizSubmissions } from "../hooks/useQuizSubmissions";
+import type { Quiz } from "../types";
 
 const { Title, Text } = Typography;
-const { Search } = Input;
-const { confirm } = Modal;
 
 const QuizManagementPage: React.FC = () => {
-  const { quizzes, isLoading, error, deleteQuiz } = useQuizzes();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
+  const { data: quizzes = [], isLoading, error } = useQuizzes();
+  const now = dayjs();
 
-  const [form] = Form.useForm();
-
-  // Tính stats
   const totalQuizzes = quizzes.length;
-  const upcomingQuizzes = quizzes.filter(q => new Date(q.endDate).getTime() > Date.now()).length;
+  const totalStudents = quizzes.reduce(
+    (sum, q) => sum + (q.totalStudents || 0),
+    0
+  );
+  const ongoing = quizzes.filter(
+    (q) => dayjs(q.startDate).isBefore(now) && dayjs(q.endDate).isAfter(now)
+  ).length;
+  const finished = quizzes.filter((q) => dayjs(q.endDate).isBefore(now)).length;
 
-  // Thêm / Sửa Quiz
-  const openModal = (quiz?: Quiz) => {
-    setEditingQuiz(quiz || null);
-    setIsModalVisible(true);
-    form.resetFields();
-    if (quiz) {
-      form.setFieldsValue({
-        ...quiz,
-        startDate: dayjs(quiz.startDate),
-        endDate: dayjs(quiz.endDate),
-      });
-    }
+  const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null);
+  const [modalType, setModalType] = useState<"submissions" | null>(null);
+
+  const selectedQuiz = quizzes.find((q) => q.id === selectedQuizId);
+
+  const {
+    data: submissions = [],
+    isLoading: isLoadingSubmissions,
+  } = useQuizSubmissions(
+    modalType === "submissions" ? selectedQuizId || 0 : undefined
+  );
+
+  const handleOpenModal = (quizId: number) => {
+    setSelectedQuizId(quizId);
+    setModalType("submissions");
   };
 
-  const handleModalCancel = () => setIsModalVisible(false);
-
-  const handleFormFinish = async (values: any) => {
-    try {
-      if (editingQuiz) {
-        // Sửa
-        await fetch(`/quizzes/${editingQuiz.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...values,
-            startDate: values.startDate.toISOString(),
-            endDate: values.endDate.toISOString(),
-          }),
-        });
-      } else {
-        // Thêm mới
-        await fetch('/quizzes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...values,
-            startDate: values.startDate.toISOString(),
-            endDate: values.endDate.toISOString(),
-          }),
-        });
-      }
-      setIsModalVisible(false);
-      window.location.reload(); // Hoặc invalidate query nếu dùng react-query
-    } catch (err) {
-      console.error(err);
-    }
+  const handleCloseModal = () => {
+    setSelectedQuizId(null);
+    setModalType(null);
   };
 
-  // Xóa Quiz
-  const handleDelete = (quiz: Quiz) => {
-    confirm({
-      title: 'Xác nhận xóa',
-      icon: <ExclamationCircleOutlined />,
-      content: `Bạn có chắc muốn xóa bài kiểm tra "${quiz.title}"?`,
-      onOk() {
-        deleteQuiz(quiz.id);
+  const columns: ColumnsType<Quiz> = [
+    { title: "Quiz Title", dataIndex: "title", key: "title" },
+    { title: "Time (minutes)", dataIndex: "timeLimit", key: "timeLimit" },
+    {
+      title: "Start Date",
+      dataIndex: "startDate",
+      key: "startDate",
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
+      responsive: ["sm"],
+    },
+    {
+      title: "End Date",
+      dataIndex: "endDate",
+      key: "endDate",
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
+      responsive: ["sm"],
+    },
+    {
+      title: "Subject",
+      key: "subject",
+      render: (_, record: Quiz) => {
+        if (!record.subject) return "-";
+        if (typeof record.subject === "object") {
+          return record.subject.subjectName || "-";
+        }
+        return record.subject;
       },
-    });
-  };
-
-  const columns = [
-    { title: 'Tên Bài kiểm tra', dataIndex: 'title', key: 'title' },
-    { title: 'Thời gian (phút)', dataIndex: 'timeLimit', key: 'timeLimit' },
-    {
-      title: 'Ngày bắt đầu',
-      dataIndex: 'startDate',
-      key: 'startDate',
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
     },
     {
-      title: 'Ngày kết thúc',
-      dataIndex: 'endDate',
-      key: 'endDate',
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
-    },
-    { title: 'ID Lớp học', dataIndex: 'classId', key: 'classId' },
-    { title: 'Người tạo', dataIndex: 'createdBy', key: 'createdBy' },
-    { title: 'Khối', dataIndex: 'grade', key: 'grade' },
-    { title: 'Môn học', dataIndex: 'subject', key: 'subject' },
-    {
-      title: 'Hành động',
-      key: 'action',
-      render: (_: any, record: Quiz) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => openModal(record)} />
-          <Button icon={<DeleteOutlined />} danger onClick={() => handleDelete(record)} />
-        </Space>
+      title: "Actions",
+      key: "action",
+      render: (_, record: Quiz) => (
+        <Dropdown
+          trigger={["click"]}
+          menu={{
+            items: [
+              {
+                key: "submissions",
+                label: "View Submissions",
+                onClick: () => handleOpenModal(record.id),
+              },
+            ],
+          }}
+        >
+          <Button icon={<MoreOutlined />} />
+        </Dropdown>
       ),
     },
   ];
 
   if (isLoading)
     return (
-      <Spin tip="Đang tải dữ liệu..." size="large" style={{ display: 'block', margin: '50px auto' }} />
+      <div style={{ textAlign: "center", margin: "50px auto" }}>
+        <Spin size="large" />
+        <div style={{ marginTop: 12 }}>Loading data...</div>
+      </div>
     );
 
+
   if (error)
-    return <Alert message="Lỗi tải dữ liệu" type="error" showIcon description={(error as Error).message} />;
+    return (
+      <Text type="danger">
+        Error loading data: {(error as Error).message}
+      </Text>
+    );
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={2}>Quản lý Bài kiểm tra</Title>
+      <Title level={2}>Quiz Management</Title>
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={12}>
+      {/* Overview */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
           <Card>
             <Space align="center">
-              <FileTextOutlined style={{ fontSize: 32, color: '#1890ff' }} />
+              <FileTextOutlined style={{ fontSize: 32, color: "#1890ff" }} />
               <div>
-                <Text type="secondary">Tổng số bài kiểm tra</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalQuizzes}</Title>
+                <Text type="secondary">Total Quizzes</Text>
+                <Title level={3} style={{ margin: 0 }}>
+                  {totalQuizzes}
+                </Title>
               </div>
             </Space>
           </Card>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12} md={6}>
           <Card>
             <Space align="center">
-              <ClockCircleOutlined style={{ fontSize: 32, color: '#faad14' }} />
+              <TeamOutlined style={{ fontSize: 32, color: "#722ed1" }} />
               <div>
-                <Text type="secondary">Sắp đến hạn</Text>
-                <Title level={3} style={{ margin: 0 }}>{upcomingQuizzes}</Title>
+                <Text type="secondary">Total Students</Text>
+                <Title level={3} style={{ margin: 0 }}>
+                  {totalStudents}
+                </Title>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Space align="center">
+              <ClockCircleOutlined style={{ fontSize: 32, color: "#fa8c16" }} />
+              <div>
+                <Text type="secondary">Ongoing</Text>
+                <Title level={3} style={{ margin: 0 }}>
+                  {ongoing}
+                </Title>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Space align="center">
+              <CheckCircleOutlined style={{ fontSize: 32, color: "#52c41a" }} />
+              <div>
+                <Text type="secondary">Finished</Text>
+                <Title level={3} style={{ margin: 0 }}>
+                  {finished}
+                </Title>
               </div>
             </Space>
           </Card>
         </Col>
       </Row>
 
-      <Card
-        title={<Text strong>Danh sách Bài kiểm tra</Text>}
-        extra={<Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>Thêm Bài kiểm tra mới</Button>}
-      >
-        <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
-          <Search placeholder="Tìm kiếm bài kiểm tra..." style={{ width: 300 }} />
-        </Space>
-        <Table columns={columns} dataSource={quizzes} rowKey="id" />
+      {/* Quiz Table */}
+      <Card>
+        <Table
+          columns={columns}
+          dataSource={quizzes}
+          rowKey="id"
+          scroll={{ x: "max-content" }}
+        />
       </Card>
 
+      {/* Submissions Modal */}
       <Modal
-        title={editingQuiz ? 'Chỉnh sửa Bài kiểm tra' : 'Thêm Bài kiểm tra mới'}
-        visible={isModalVisible}
-        onCancel={handleModalCancel}
-        okText={editingQuiz ? 'Cập nhật' : 'Thêm'}
-        onOk={() => form.submit()}
+        open={!!modalType}
+        title={`Submissions - ${selectedQuiz?.title || ""}`}
+        onCancel={handleCloseModal}
+        footer={null}
+        style={{ top: 20 }}
+        width={600}
       >
-        <Form form={form} layout="vertical" onFinish={handleFormFinish}>
-          <Form.Item name="title" label="Tên bài kiểm tra" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="timeLimit" label="Thời gian (phút)" rules={[{ required: true }]}>
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="startDate" label="Ngày bắt đầu" rules={[{ required: true }]}>
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="endDate" label="Ngày kết thúc" rules={[{ required: true }]}>
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="classId" label="ID Lớp học" rules={[{ required: true }]}>
-            <InputNumber style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="grade" label="Khối" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="subject" label="Môn học" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="createdBy" label="Người tạo" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-        </Form>
+        {isLoadingSubmissions ? (
+          <Spin />
+        ) : submissions.length ? (
+          <Table
+            columns={[
+              {
+                title: "Student Name",
+                dataIndex: "studentName",
+                key: "studentId",
+                render: (val: string | number) => `${val}`,
+              },
+              {
+                title: "Submitted At",
+                dataIndex: "submittedAt",
+                key: "submittedAt",
+                render: (date: string) =>
+                  dayjs(date).format("DD/MM/YYYY HH:mm"),
+              },
+              { title: "Score", dataIndex: "score", key: "score" },
+            ]}
+            dataSource={submissions}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: "max-content" }}
+          />
+        ) : (
+          <Text>No submissions yet</Text>
+        )}
       </Modal>
     </div>
   );

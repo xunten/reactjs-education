@@ -1,5 +1,12 @@
 export interface ClassUser {
-    class_id: number;
-    student_id: number;
-    joined_at: string;
+  id: number;
+  username: string;
+  fullName: string;
+  email: string;
+  joinedAt: string;
+}
+
+export interface AddStudentToClassDTO {
+    classId: number;
+    studentId: number;
 }

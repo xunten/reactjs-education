@@ -1,6 +1,5 @@
 // hooks/useUsers.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
 import { fetchUsers, createUser, updateUser, deleteUser } from '../api/userApi';
 import type { User } from '../types';
 
@@ -9,11 +8,10 @@ export const useUsers = () => {
   return useQuery<User[], Error>({
     queryKey: ['users'],
     queryFn: fetchUsers,
-    staleTime: 1000 * 60 * 5, // Giữ data trong cache 5 phút
+    staleTime: 1000 * 60 * 5,
   });
 };
 
-// Hook tạo người dùng mới (Optimistic Update)
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
   return useMutation<User, Error, Partial<User>>({
@@ -28,13 +26,10 @@ export const useCreateUser = () => {
       ]);
       return { previousUsers };
     },
-    onError: (err, _, context) => {
+    onError: (_err, _newUser, context) => {
+      // rollback nếu lỗi
       const ctx = context as { previousUsers?: User[] } | undefined;
-      queryClient.setQueryData(['users'], ctx?.previousUsers);  
-      message.error(err.message || 'Tạo người dùng thất bại');
-    },
-    onSuccess: () => {
-      message.success('Tạo người dùng thành công');
+      queryClient.setQueryData(['users'], ctx?.previousUsers);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -42,14 +37,13 @@ export const useCreateUser = () => {
   });
 };
 
-// Hook xóa người dùng (Optimistic Update)
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useMutation<void, any, number>({
     mutationFn: deleteUser,
     onMutate: async (userId) => {
-      if (!userId) return; // tránh undefined
+      if (!userId) return;
       await queryClient.cancelQueries({ queryKey: ['users'] });
       const previousUsers = queryClient.getQueryData<User[]>(['users']);
       queryClient.setQueryData<User[]>(['users'], (old) =>
@@ -57,18 +51,9 @@ export const useDeleteUser = () => {
       );
       return { previousUsers };
     },
-    onError: (err, _userId, context) => {
+    onError: (_err, _userId, context) => {
       const ctx = context as { previousUsers?: User[] } | undefined;
       queryClient.setQueryData(['users'], ctx?.previousUsers);
-      // Kiểm tra lỗi FK constraint
-      if (err?.response?.data?.errors?.[0]?.includes("foreign key")) {
-        message.error("Không thể xóa user này vì đang có liên kết với lớp học");
-      } else {
-        message.error(err.message || "Xóa người dùng thất bại");
-      }
-    },
-    onSuccess: () => {
-      message.success("Xóa người dùng thành công");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -76,7 +61,6 @@ export const useDeleteUser = () => {
   });
 };
 
-// Hook cập nhật người dùng (Optimistic Update)
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation<User, Error, { userId: number; userData: Partial<User> }>({
@@ -91,13 +75,9 @@ export const useUpdateUser = () => {
       );
       return { previousUsers };
     },
-    onError: (err, _, context) => {
+    onError: (_err, _vars, context) => {
       const ctx = context as { previousUsers?: User[] } | undefined;
       queryClient.setQueryData(['users'], ctx?.previousUsers);
-      message.error(err.message || 'Cập nhật người dùng thất bại');
-    },
-    onSuccess: () => {
-      message.success('Cập nhật người dùng thành công');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });

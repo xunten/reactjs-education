@@ -1,98 +1,113 @@
-import React, { useState } from 'react';
-import { Card, Table, Typography, Spin, Alert, Button, Popconfirm, message, Space, Select, DatePicker } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
-import { useActivityLogs } from '../hooks/useActivityLogs';
-import type { ActivityLog } from '../types';
+import React, { useState, useMemo } from "react";
+import { Card, Table, Typography, Spin, Alert, Button, Popconfirm, Select, DatePicker, Row, Col,
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import { useActivityLogs } from "../hooks/useActivityLogs";
+import type { ActivityLog } from "../types";
+import { PieChart, Pie, Cell, Tooltip, AreaChart, Area, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line,
+} from "recharts";
 
 const { Title } = Typography;
 const { Option } = Select;
 
-const CRUD_ACTIONS = ['CREATE', 'UPDATE', 'DELETE'];
+const CRUD_ACTIONS = ["CREATE", "UPDATE", "DELETE"];
+const PIE_COLORS = ["#13c2c2", "#faad14", "#f5222d"];
+const AREA_COLOR = "#722ed1";
+const LINE_COLOR = "#f5222d";
 
 const ActivityLogPage: React.FC = () => {
-  const { data: activityLogs, isLoading, error, deleteLogs } = useActivityLogs();
+  const { data: activityLogs = [], isLoading, error, deleteLogs } =
+    useActivityLogs();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [selectedUser, setSelectedUser] = useState<number | undefined>();
-  const [selectedAction, setSelectedAction] = useState<string | undefined>();
+  const [selectedUser, setSelectedUser] = useState<number>();
+  const [selectedAction, setSelectedAction] = useState<string>();
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
 
   const handleDeleteSelected = () => {
     if (!selectedRowKeys.length) return;
     deleteLogs.mutate(selectedRowKeys as number[], {
-      onSuccess: () => {
-        message.success(`${selectedRowKeys.length} activity logs deleted`);
-        setSelectedRowKeys([]);
-      },
-      onError: () => {
-        message.error('Failed to delete activity logs');
-      },
+      onSuccess: () => setSelectedRowKeys([]),
     });
   };
 
-  // Filter data by user, action, and date
-  const filteredData = activityLogs?.filter(log => {
-    const matchUser = !selectedUser || log.userId === selectedUser;
-    const matchAction = !selectedAction || log.actionType === selectedAction;
-    const matchDate = !selectedDate || dayjs(log.createdAt).isSame(selectedDate, 'day');
-    return matchUser && matchAction && matchDate;
-  }) ?? [];
+  // Filtered logs
+  const filteredData = useMemo(
+    () =>
+      activityLogs.filter((log) => {
+        const matchUser = !selectedUser || log.userId === selectedUser;
+        const matchAction = !selectedAction || log.actionType === selectedAction;
+        const matchDate =
+          !selectedDate || dayjs(log.createdAt).isSame(selectedDate, "day");
+        return matchUser && matchAction && matchDate;
+      }),
+    [activityLogs, selectedUser, selectedAction, selectedDate]
+  );
+
+  // Logs by day for AreaChart
+  const logsByDayData = useMemo(
+    () =>
+      Array.from({ length: 7 }).map((_, i) => {
+        const day = dayjs().subtract(6 - i, "day").format("DD/MM");
+        return {
+          date: day,
+          activities: filteredData.filter(
+            (l) => dayjs(l.createdAt).format("DD/MM") === day
+          ).length,
+          users: new Set(
+            filteredData
+              .filter((l) => dayjs(l.createdAt).format("DD/MM") === day)
+              .map((l) => l.userId)
+          ).size,
+        };
+      }),
+    [filteredData]
+  );
+
+  // Logs by action for PieChart
+  const logsByActionData = useMemo(
+    () =>
+      CRUD_ACTIONS.map((action, idx) => ({
+        name: action,
+        value: filteredData.filter((log) => log.actionType === action).length,
+        color: PIE_COLORS[idx],
+      })),
+    [filteredData]
+  );
 
   const columns: ColumnsType<ActivityLog> = [
+    { title: "User Name", dataIndex: "fullName", key: "fullName" },
+    { title: "Action", dataIndex: "actionType", key: "actionType" },
+    { title: "Description", dataIndex: "description", key: "description" },
     {
-      title: 'User Name',
-      dataIndex: 'fullName',
-      key: 'fullName',
+      title: "Time",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm:ss"),
+      defaultSortOrder: "descend",
+      sorter: (a, b) =>
+        dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
     },
-    {
-      title: 'Action',
-      dataIndex: 'actionType',
-      key: 'actionType',
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-    },
-    {
-      title: 'Time',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (createdAt: string) => dayjs(createdAt).format('DD/MM/YYYY HH:mm:ss'),
-      defaultSortOrder: 'descend',
-    },
-    {
-      title: 'Target Table',
-      dataIndex: 'targetTable',
-      key: 'targetTable',
-    },
+    { title: "Target Table", dataIndex: "targetTable", key: "targetTable" },
   ];
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
-  };
+  const rowSelection = { selectedRowKeys, onChange: setSelectedRowKeys };
 
-  if (isLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 50 }}>
-        <Spin size="large" tip="Loading activity logs..." />
-      </div>
-    );
-  }
+  if (isLoading) return <Spin spinning fullscreen tip="Loading activity logs..." />;
 
-  if (error) {
+  if (error)
     return (
       <div style={{ padding: 24 }}>
         <Alert
           message="Data Load Error"
-          description={`Failed to load activity logs: ${(error as Error).message}`}
+          description={`Failed to load activity logs: ${
+            (error as Error).message
+          }`}
           type="error"
           showIcon
         />
       </div>
     );
-  }
 
   return (
     <div style={{ padding: 24 }}>
@@ -100,69 +115,156 @@ const ActivityLogPage: React.FC = () => {
         Activity Logs
       </Title>
 
-      <Card>
-        {/* Filters */}
-        <Space style={{ marginBottom: 16, flexWrap: 'wrap' }}>
-          <Select
-            placeholder="Select User"
-            style={{ width: 200 }}
-            value={selectedUser}
-            onChange={setSelectedUser}
-            allowClear
-          >
-            {activityLogs
-              ?.map(l => ({ id: l.userId, name: l.fullName }))
-              .filter((v, i, arr) => v.id && arr.findIndex(a => a.id === v.id) === i)
-              .map(u => (
-                <Option key={u.id} value={u.id}>
-                  {u.name}
+      {/* Filters */}
+      <Card style={{ marginBottom: 24 }}>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <Select
+              placeholder="Select User"
+              style={{ width: "100%" }}
+              value={selectedUser}
+              onChange={setSelectedUser}
+              allowClear
+            >
+              {[
+                ...new Map(activityLogs.map((l) => [l.userId, l.fullName])),
+              ].map(([id, name]) => (
+                <Option key={id} value={id}>
+                  {name}
                 </Option>
               ))}
-          </Select>
+            </Select>
+          </Col>
 
-          <Select
-            placeholder="Select Action"
-            style={{ width: 180 }}
-            value={selectedAction}
-            onChange={setSelectedAction}
-            allowClear
-          >
-            {CRUD_ACTIONS.map(a => (
-              <Option key={a} value={a}>
-                {a}
-              </Option>
-            ))}
-          </Select>
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <Select
+              placeholder="Select Action"
+              style={{ width: "100%" }}
+              value={selectedAction}
+              onChange={setSelectedAction}
+              allowClear
+            >
+              {CRUD_ACTIONS.map((a) => (
+                <Option key={a} value={a}>
+                  {a}
+                </Option>
+              ))}
+            </Select>
+          </Col>
 
-          <DatePicker
-            placeholder="Select Date"
-            style={{ width: 180 }}
-            value={selectedDate}
-            onChange={setSelectedDate}
-          />
-        </Space>
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <DatePicker
+              placeholder="Select Date"
+              style={{ width: "100%" }}
+              value={selectedDate}
+              onChange={setSelectedDate}
+            />
+          </Col>
 
-        {selectedRowKeys.length > 0 && (
-          <Popconfirm
-            title="Are you sure you want to delete the selected activity logs?"
-            onConfirm={handleDeleteSelected}
-            okText="Delete"
-            cancelText="Cancel"
-          >
-            <Button danger style={{ marginBottom: 16 }}>
-              Delete Selected ({selectedRowKeys.length})
-            </Button>
-          </Popconfirm>
-        )}
+          <Col xs={24} sm={12} md={24} lg={6}>
+            {selectedRowKeys.length > 0 && (
+              <Popconfirm
+                title={`Delete ${selectedRowKeys.length} selected logs?`}
+                onConfirm={handleDeleteSelected}
+                okText="Delete"
+                cancelText="Cancel"
+              >
+                <Button danger block>
+                  Delete Selected ({selectedRowKeys.length})
+                </Button>
+              </Popconfirm>
+            )}
+          </Col>
+        </Row>
+      </Card>
 
+      {/* Table */}
+      <Card style={{ marginBottom: 24 }}>
         <Table
           rowSelection={rowSelection}
           columns={columns}
           dataSource={filteredData}
           rowKey="id"
-          pagination={{ pageSize: 8 }}
+          pagination={{ pageSize: 10, showSizeChanger: true }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
+
+      {/* Dashboard Charts */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} md={12}>
+          <Card title="Logs in Last 7 Days" style={{ borderRadius: 12 }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={logsByDayData}>
+                <defs>
+                  <linearGradient id="colorActivities" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={AREA_COLOR} stopOpacity={0.8} />
+                    <stop offset="95%" stopColor={AREA_COLOR} stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="activities"
+                  stroke={AREA_COLOR}
+                  fill="url(#colorActivities)"
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="users"
+                  stroke={LINE_COLOR}
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <Card title="Action Distribution" style={{ borderRadius: 12 }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={logsByActionData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={120}
+                  label={(props) => {
+                    const { name, percent, midAngle, outerRadius, cx, cy } =
+                      props;
+                    const radius = outerRadius! * 1.2;
+                    const x =
+                      cx! + radius * Math.cos((-midAngle! * Math.PI) / 180);
+                    const y =
+                      cy! + radius * Math.sin((-midAngle! * Math.PI) / 180);
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        textAnchor={x > cx! ? "start" : "end"}
+                        dominantBaseline="central"
+                        fontSize={14}
+                        fill="#000"
+                      >
+                        {`${name}: ${(percent! * 100).toFixed(0)}%`}
+                      </text>
+                    );
+                  }}
+                >
+                  {logsByActionData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };

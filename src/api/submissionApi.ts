@@ -1,9 +1,10 @@
 import apiClient from "./apiClient";
-import type { Submission } from "../types/Submission";
+import type { Submission } from "../types/Submissions";
 
 const submissionApi = {
-  getAll: async (): Promise<Submission[]> => {
-    const { data } = await apiClient.get("/submissions");
+  getAll: async (assignmentId?: number): Promise<Submission[]> => {
+    const url = assignmentId ? `/submissions/assignment/${assignmentId}` : '/submissions';
+    const { data } = await apiClient.get(url);
     return data;
   },
   delete: async (id: number) => {

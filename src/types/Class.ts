@@ -7,5 +7,6 @@ export interface Class {
   teacherId: number;
   fullName: string;
   subjectId: number;
-
+  createdAt?: Date;
+  joinMode: "APPROVAL" | "AUTO"
 }

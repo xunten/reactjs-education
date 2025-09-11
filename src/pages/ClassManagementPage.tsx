@@ -1,32 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Card,
-  Table,
-  Typography,
-  Button,
-  Dropdown,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  message,
-  Spin,
-  Alert,
-  Radio,
-  Popconfirm,
-  Space,
+  Card, Table, Typography, Button, Dropdown, Modal, Form, Input, InputNumber, Select, message, Spin, Alert, Radio, Popconfirm, Space,
+  Row, Col,
 } from 'antd';
-import { BookOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, BookOutlined, MoreOutlined, PlusOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Class } from '../types';
+import type { Assignment, Class, ClassUser } from '../types';
 import { useClasses } from '../hooks/useClasses';
 import { useSubjects } from '../hooks/useSubjects';
 import { useUsers } from '../hooks/useUsers';
+import { useClassUsers } from '../hooks/useClassUsers';
+import { useAssignments } from '../hooks/useAssignments';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+const joinModeOptions = [
+  { label: "Approval", value: "APPROVAL" },
+  { label: "Auto", value: "AUTO" },
+];
 
 const ClassManagementPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -49,6 +42,13 @@ const ClassManagementPage: React.FC = () => {
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [searchText, setSearchText] = useState('');
 
+  // Student List modal
+  const [isStudentModalVisible, setIsStudentModalVisible] = useState(false);
+  const [selectedClassId] = useState<number | null>(null);
+
+  // Assignments modal
+  const [isAssignmentModalVisible, setIsAssignmentModalVisible] = useState(false);
+
   // Map lookup để tối ưu tìm kiếm
   const subjectMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -66,22 +66,40 @@ const ClassManagementPage: React.FC = () => {
     return map;
   }, [users]);
 
+  const normalize = (str: string) =>
+    str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
   const classesWithNames = useMemo(() => {
     if (!classes) return [];
-    const search = searchText.toLowerCase();
+    const search = normalize(searchText);
+
     return classes
       .map(cls => ({
         ...cls,
-        subjectName: subjectMap.get(cls.subjectId) || 'N/A',
-        fullName: teacherMap.get(cls.teacherId) || 'N/A',
+        subjectName: subjectMap.get(cls.subjectId) || "N/A",
+        fullName: teacherMap.get(cls.teacherId) || "N/A",
       }))
-      .filter(c => c.className.toLowerCase().includes(search));
+      .filter(c => {
+        const className = normalize(c.className);
+        const subjectName = normalize(c.subjectName);
+        const teacherName = normalize(c.fullName);
+
+        return (
+          className.includes(search) ||
+          subjectName.includes(search) ||
+          teacherName.includes(search)
+        );
+      });
   }, [classes, subjectMap, teacherMap, searchText]);
 
   if (isLoading || isSubjectsLoading || isUsersLoading) {
     return (
       <div style={{ textAlign: 'center', padding: 50 }}>
-        <Spin size="large" tip="Loading data..." />
+        <Spin size="large" />
       </div>
     );
   }
@@ -107,10 +125,11 @@ const ClassManagementPage: React.FC = () => {
         ...record,
         schoolYear: Number(record.schoolYear),
         semester: record.semester,
+        joinMode: record.joinMode,
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ schoolYear: dayjs().year(), semester: '' });
+      form.setFieldsValue({ schoolYear: dayjs().year(), semester: '', joinMode: "APPROVAL" });
     }
   };
 
@@ -157,6 +176,8 @@ const ClassManagementPage: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
+      fixed: 'right',
+      width: 80,
       render: (_, record) => (
         <Dropdown
           trigger={['click']}
@@ -178,8 +199,6 @@ const ClassManagementPage: React.FC = () => {
                   </Popconfirm>
                 ),
               },
-              { key: 'students', label: 'Student List' },
-              { key: 'assignments', label: 'Assignments' },
             ],
           }}
         >
@@ -189,29 +208,153 @@ const ClassManagementPage: React.FC = () => {
     },
   ];
 
+  // ================= STUDENT LIST TABLE =================
+  const StudentListTable: React.FC<{ classId: number }> = ({ classId }) => {
+    const { classUsers, isLoading: isStudentsLoading, removeStudent } = useClassUsers(classId);
+
+    const columns = [
+      { title: 'Student ID', dataIndex: 'id', key: 'id' },
+      { title: 'Name', dataIndex: 'fullName', key: 'fullName' },
+      { title: 'Email', dataIndex: 'email', key: 'email' },
+      { title: 'Joined At', dataIndex: 'joinedAt', key: 'joinedAt', render: (val: string) => new Date(val).toLocaleString() },
+      {
+        title: 'Action',
+        key: 'action',
+        fixed: 'right' as const,
+        width: 80,
+        render: (_: unknown, record: ClassUser) => (
+          <Popconfirm
+            title="Remove student?"
+            onConfirm={async () => {
+              await removeStudent(record.id);
+              message.success('Removed successfully');
+            }}
+          >
+            <a style={{ color: 'red' }}>Remove</a>
+          </Popconfirm>
+        ),
+      },
+    ];
+
+    return (
+      <Table
+        columns={columns}
+        dataSource={classUsers}
+        rowKey="student_id"
+        loading={isStudentsLoading}
+        pagination={{ pageSize: 10 }}
+        scroll={{ x: 'max-content' }}
+      />
+    );
+  };
+
+  // ================= ASSIGNMENTS LIST TABLE =================
+  const AssignmentListTable: React.FC<{ classId: number }> = ({ classId }) => {
+    const { assignments, isLoading, deleteAssignment } = useAssignments(classId);
+
+    const columns = [
+      { title: "ID", dataIndex: "id", key: "id" },
+      { title: "Title", dataIndex: "title", key: "title" },
+      { title: "Description", dataIndex: "description", key: "description" },
+      { title: "Deadline", dataIndex: "dueDate", key: "dueDate", render: (d: string) => new Date(d).toLocaleString() },
+      {
+        title: "Action",
+        key: "action",
+        fixed: 'right' as const,
+        width: 80,
+        render: (_: unknown, record: Assignment) => (
+          <Popconfirm
+            title="Delete this assignment?"
+            onConfirm={async () => {
+              await deleteAssignment(record.id);
+              message.success("Assignment deleted");
+            }}
+          >
+            <a style={{ color: "red" }}>Delete</a>
+          </Popconfirm>
+        ),
+      },
+    ];
+
+    return (
+      <Table
+        columns={columns}
+        dataSource={assignments}
+        rowKey="id"
+        loading={isLoading}
+        pagination={{ pageSize: 10 }}
+        scroll={{ x: 'max-content' }}
+      />
+    );
+  };
+
   return (
     <div style={{ padding: 24 }}>
       <Title level={3} style={{ marginBottom: 24 }}>Class Management</Title>
 
-      <Card style={{ marginBottom: 24 }}>
-        <Space>
-          <BookOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-          <div>
-            <Text strong>Total Classes:</Text>{' '}
-            <Text type="secondary">{classes?.length}</Text>
-          </div>
-        </Space>
-      </Card>
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Space>
+              <AppstoreOutlined style={{ fontSize: 32, color: "#1890ff" }} />
+              <div>
+                <Text type="secondary">Total classes</Text>
+                <Title level={3} style={{ margin: 0 }}>{classes?.length || 0}</Title>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Space>
+              <TeamOutlined style={{ fontSize: 32, color: "#52c41a" }} />
+              <div>
+                <Text type="secondary">Total students</Text>
+                <Title level={3} style={{ margin: 0 }}>
+                  {users.filter(u => Array.isArray(u.roles) && u.roles.some(r => r.name.toLowerCase() === "student")).length}
+                </Title>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Space>
+              <UserOutlined style={{ fontSize: 32, color: "#faad14" }} />
+              <div>
+                <Text type="secondary">Total teachers</Text>
+                <Title level={3} style={{ margin: 0 }}>
+                  {users.filter(u => Array.isArray(u.roles) && u.roles.some(r => r.name.toLowerCase() === "teacher")).length}
+                </Title>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Space>
+              <BookOutlined style={{ fontSize: 32, color: "#eb2f96" }} />
+              <div>
+                <Text type="secondary">Total subjects</Text>
+                <Title level={3} style={{ margin: 0 }}>{subjects.length}</Title>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       <Card>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Input.Search
             placeholder="Search class by name"
-            style={{ width: 250 }}
+            style={{ width: '100%', maxWidth: 250 }}
             allowClear
             onChange={(e) => setSearchText(e.target.value)}
           />
-          <Button type="default" icon={<PlusOutlined />} onClick={() => showModal()} loading={isCreating}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()} loading={isCreating}>
             Add Class
           </Button>
         </div>
@@ -220,11 +363,13 @@ const ClassManagementPage: React.FC = () => {
           columns={columns}
           dataSource={classesWithNames}
           rowKey="id"
-          pagination={{ pageSize: 7 }}
+          pagination={{ pageSize: 10 }}
           loading={isLoading || isDeleting}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
+      {/* ADD / EDIT CLASS MODAL */}
       <Modal
         title={editingClass ? 'Edit Class' : 'Add New Class'}
         open={isModalVisible}
@@ -232,14 +377,14 @@ const ClassManagementPage: React.FC = () => {
         onOk={() => form.submit()}
         okText={editingClass ? 'Update' : 'Create'}
         cancelText="Cancel"
-        okType="default"
+        okType="primary"
         confirmLoading={isCreating || isUpdating}
       >
         <Form
           layout="vertical"
           form={form}
           onFinish={handleFinish}
-          initialValues={{ schoolYear: dayjs().year(), semester: '' }}
+          initialValues={{ schoolYear: dayjs().year(), semester: '', joinMode: "APPROVAL" }}
         >
           <Form.Item label="Class Name" name="className" rules={[{ required: true, message: 'Please enter class name' }]}>
             <Input />
@@ -255,9 +400,9 @@ const ClassManagementPage: React.FC = () => {
 
           <Form.Item label="Semester" name="semester" rules={[{ required: true, message: 'Please select semester' }]}>
             <Radio.Group>
-              <Radio value="Semester 1">Semester 1</Radio>
-              <Radio value="Semester 2">Semester 2</Radio>
-              <Radio value="Summer">Summer</Radio>
+              <Radio value="Học kỳ 1">Semester 1</Radio>
+              <Radio value="Học kỳ 2">Semester 2</Radio>
+              <Radio value="Học kỳ hè">Summer</Radio>
             </Radio.Group>
           </Form.Item>
 
@@ -274,8 +419,43 @@ const ClassManagementPage: React.FC = () => {
               ))}
             </Select>
           </Form.Item>
+
+          <Form.Item label="Join Mode" name="joinMode" rules={[{ required: true, message: 'Please select join mode' }]}>
+            <Radio.Group>
+              {joinModeOptions.map(option => (
+                <Radio key={option.value} value={option.value}>{option.label}</Radio>
+              ))}
+            </Radio.Group>
+          </Form.Item>
         </Form>
       </Modal>
+
+      {/* STUDENT LIST MODAL */}
+      {isStudentModalVisible && selectedClassId && (
+        <Modal
+          title="Student List"
+          open={isStudentModalVisible}
+          onCancel={() => setIsStudentModalVisible(false)}
+          footer={null}
+          width={600}
+        >
+          <StudentListTable classId={selectedClassId} />
+        </Modal>
+      )}
+
+      {/* ASSIGNMENTS MODAL */}
+      {isAssignmentModalVisible && selectedClassId && (
+        <Modal
+          title="Assignments"
+          open={isAssignmentModalVisible}
+          onCancel={() => setIsAssignmentModalVisible(false)}
+          footer={null}
+          width={800}
+        >
+          <AssignmentListTable classId={selectedClassId} />
+        </Modal>
+      )}
+
     </div>
   );
 };

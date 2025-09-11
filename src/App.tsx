@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { ThemeProvider } from "./components/ThemeContext";
+import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider } from "./components/Auth/AuthProvider";
 import { useAuth } from "../src/context/AuthContext";
 import { App as AntdApp } from "antd";

@@ -1,15 +1,21 @@
+export interface Student {
+  id: number;
+  fullName: string;
+  email: string;
+  imageUrl: string | null;
+}
 
 export interface Submission {
-  id: bigint;
-  assignment_id: bigint;
-  student_id: bigint;
-  submitted_at: Date;
-  file_path: string;
-  status: "GRADED" | "UNGRADED" | "SUBMITTED";
-  score: number;
-  graded_at: Date;
-  teacher_comment: string;
-  file_type: string;
-  description: string;
-  file_size: number;
+  id: number;
+  assignmentId: number;
+  filePath: string;
+  fileType: string;
+  fileSize: string; 
+  description: string | null;
+  status: "SUBMITTED" | "GRADED";
+  score: number | null;
+  teacherComment: string | null;
+  submittedAt: string;  
+  gradedAt: string | null; 
+  student: Student;
 }

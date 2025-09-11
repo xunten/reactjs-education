@@ -1,11 +1,13 @@
 import React from "react";
-import { App as AntdApp } from "antd";
+import { App as AntdApp, Card, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 import { login as apiLogin } from "../api/authApi";
 import type { Credentials, AuthResponse } from "../types/Auth";
 import type { User } from "../types/User";
 import { useAuth } from "../hooks/useAuth";
 import LoginForm from "../components/Auth/LoginForm";
+
+const { Title, Text } = Typography;
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,7 +21,7 @@ const LoginPage: React.FC = () => {
         : { username: values.usernameOrEmail, password: values.password };
 
       const { token, user: authUser }: AuthResponse = await apiLogin(payload);
-      console.log('Phản hồi từ API:', authUser);
+      console.log("Phản hồi từ API:", authUser);
 
       const appUser: User = {
         id: authUser.id,
@@ -27,21 +29,20 @@ const LoginPage: React.FC = () => {
         full_name: authUser.fullName,
         email: authUser.email,
         roles: authUser.roles.map((role: string, index: number) => ({
-          id: index,       // Nếu API không trả id, bạn có thể tạm tạo id
+          id: index,
           name: role,
         })),
       };
 
+      authContextLogin(token, appUser);
 
-      authContextLogin(token, appUser); 
-
-      const hasAccess = appUser.roles.some(r => r.name === "admin");
+      const hasAccess = appUser.roles.some((r) => r.name === "admin");
 
       if (hasAccess) {
-        messageApi.success("Đăng nhập thành công");
+        messageApi.success("Login successful!");
         navigate("/");
       } else {
-        messageApi.error("Bạn không đủ quyền truy cập Dashboard.");
+        messageApi.error("You do not have access to the Dashboard.");
         authContextLogout();
         navigate("/login");
       }
@@ -49,22 +50,31 @@ const LoginPage: React.FC = () => {
       const errorMessage =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (error as any).response?.data?.message ||
-        "Tên đăng nhập hoặc mật khẩu sai.";
+        "Username or password is incorrect.";
       messageApi.error(errorMessage);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-          <p className="text-gray-500 text-sm">
-            Vui lòng đăng nhập để tiếp tục
-          </p>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#f5f5f5",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "16px",
+      }}
+    >
+      <Card style={{ width: "100%", maxWidth: 400, borderRadius: 12 }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <Title level={3} style={{ marginBottom: 8 }}>
+            Admin Dashboard
+          </Title>
+          <Text type="secondary">Please log in to continue</Text>
         </div>
         <LoginForm onLogin={handleLogin} />
-      </div>
+      </Card>
     </div>
   );
 };

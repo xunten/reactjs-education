@@ -51,9 +51,9 @@ export const useQuizzes = () => {
   });
 
   return {
-    quizzes: quizzesQuery.data || [],
-    isLoading: quizzesQuery.isLoading,
-    error: quizzesQuery.error,
+    // Giữ nguyên object query gốc -> có .data, .isLoading, .error, .refetch...
+    ...quizzesQuery,
+
 
     createQuiz: createQuizMutation.mutateAsync,
     updateQuiz: updateQuizMutation.mutateAsync,

@@ -1,42 +1,23 @@
 import apiClient from './apiClient';
-import type { Attendance } from '../types/Attendance';
+import type { Attendance, BulkAttendanceRequest } from '../types/Attendance';
 
-const BASE_URL = '/attendances';
+const BASE_URL = '/attendance';
 
 const attendanceApi = {
-  getAll: async (): Promise<Attendance[]> => {
-    const response = await apiClient.get<Attendance[]>(BASE_URL);
+  // Lấy danh sách điểm danh theo buổi học
+  getBySessionId: async (sessionId: number): Promise<Attendance[]> => {
+    const response = await apiClient.get<Attendance[]>(`${BASE_URL}/${sessionId}`);
     return response.data;
   },
 
-  getByScheduleId: async (scheduleId: number): Promise<Attendance[]> => {
-    const response = await apiClient.get<Attendance[]>(`${BASE_URL}/class-schedule/${scheduleId}`);
-    return response.data;
+  // Ghi nhận điểm danh cho cả lớp
+  recordAttendance: async (sessionId: number, data: BulkAttendanceRequest): Promise<void> => {
+    await apiClient.post(`${BASE_URL}/${sessionId}`, data);
   },
 
-  create: async (data: Partial<Attendance>): Promise<Attendance> => {
-    const response = await apiClient.post<Attendance>(BASE_URL, data);
-    return response.data;
-  },
-
-  updateStatus: async (id: number, status: Attendance['status']): Promise<Attendance> => {
-    const response = await apiClient.patch<Attendance>(`${BASE_URL}/${id}`, { status });
-    return response.data;
-  },
-
-  getAllWithFilters: async (
-    classId?: number,
-    studentId?: number,
-    scheduleId?: number
-  ): Promise<Attendance[]> => {
-    const params = new URLSearchParams();
-    if (classId !== undefined) params.append('classId', String(classId));
-    if (studentId !== undefined) params.append('studentId', String(studentId));
-    if (scheduleId !== undefined) params.append('scheduleId', String(scheduleId));
-
-    const queryString = params.toString();
-    const url = `${BASE_URL}${queryString ? `?${queryString}` : ''}`;
-    const response = await apiClient.get<Attendance[]>(url);
+  // Cập nhật điểm danh cho một học sinh
+  updateAttendance: async (recordId: number, data: Partial<Attendance>): Promise<Attendance> => {
+    const response = await apiClient.put<Attendance>(`${BASE_URL}/${recordId}`, data);
     return response.data;
   },
 };

@@ -1,9 +1,11 @@
 export interface QuizSubmission {
   id: number;
   quizId: number;
-  quizTitle?: string;
   studentId: number;
   studentName?: string;
-  score: number;
   submittedAt: Date;
+  score: number;
+  gradedAt?: Date;
+  startAt: Date;
+  endAt: Date;
 }

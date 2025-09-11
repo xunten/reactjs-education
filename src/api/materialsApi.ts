@@ -21,14 +21,6 @@ export const materialsApi = {
     return response.data;
   },
 
-  // Tải xuống tài liệu theo id
-  download: async (id: number): Promise<Blob> => {
-    const response = await apiClient.get(`/materials/download/${id}`, {
-      responseType: 'blob',
-    });
-    return response.data;
-  },
-
   // Tạo tài liệu mới (upload file)
   create: async (formData: FormData): Promise<ClassMaterial> => {
     const response: AxiosResponse<ClassMaterial> = await apiClient.post('/materials', formData, {
@@ -48,5 +40,36 @@ export const materialsApi = {
   // Xóa tài liệu
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/materials/${id}`);
+  },
+
+  // Tải về và lưu file
+  downloadAndSave: async (id: number) => {
+    const response = await apiClient.get(`/materials/download/${id}`, {
+      responseType: "blob",
+    });
+
+    // Lấy MIME type từ server
+    const contentType = response.headers["content-type"] || "application/octet-stream";
+
+    const blob = new Blob([response.data], { type: contentType });
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+
+    const disposition = response.headers["content-disposition"];
+    let fileName = `file_${id}`;
+    if (disposition) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match?.[1]) {
+        fileName = match[1];
+      }
+    }
+
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   },
 };

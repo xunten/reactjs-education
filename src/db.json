@@ -1,7 +1,0 @@
-{
-  "users": [
-    { "id": 1, "username": "admin", "password": "123", "roles": ["admin"] },
-    { "id": 2, "username": "teacher", "password": "123", "roles": ["teacher"] },
-    { "id": 3, "username": "student", "password": "123", "roles": ["student"] }
-  ]
-}

@@ -22,6 +22,8 @@ const classApi = {
       teacherId: item.teacher?.id ?? 0,
       fullName: item.teacher?.fullName ?? "",
       subjectId: item.subject?.id ?? 0,
+      joinMode: item.joinMode,
+
     })) as Class[];
   },
 
@@ -38,6 +40,8 @@ const classApi = {
       teacherId: item.teacher?.id ?? 0,
       fullName: item.teacher?.fullName ?? "",
       subjectId: item.subject?.id ?? 0,
+      joinMode: item.joinMode,
+
     } as Class;
   },
 

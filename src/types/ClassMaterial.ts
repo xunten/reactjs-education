@@ -10,7 +10,3 @@ export interface ClassMaterial {
     classId: number;
     downloadCount?: number;
 }
-export interface Class {
-  id: number;
-  className: string;
-}
