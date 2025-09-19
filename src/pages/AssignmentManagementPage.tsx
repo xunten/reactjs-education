@@ -59,8 +59,9 @@ const AssignmentManagementPage: React.FC = () => {
       formData.append("classId", values.classId);
       formData.append("maxScore", values.maxScore);
       formData.append("description", values.description || "");
-      if (values.dueDate) formData.append("dueDate", values.dueDate.toISOString());
-
+if (values.dueDate) {
+  formData.append("dueDate", dayjs(values.dueDate).format("YYYY-MM-DDTHH:mm:ss"));
+}
       const fileList = values.file as UploadFile[] | undefined;
       if (fileList && fileList[0]?.originFileObj) {
         formData.append("file", fileList[0].originFileObj);
@@ -95,8 +96,9 @@ const AssignmentManagementPage: React.FC = () => {
       formData.append("classId", values.classId);
       formData.append("maxScore", values.maxScore);
       formData.append("description", values.description || "");
-      if (values.dueDate) formData.append("dueDate", values.dueDate.toISOString());
-
+if (values.dueDate) {
+  formData.append("dueDate", dayjs(values.dueDate).format("YYYY-MM-DDTHH:mm:ss"));
+}
       const fileList = values.file as UploadFile[] | undefined;
       if (fileList && fileList[0]?.originFileObj) {
         formData.append("file", fileList[0].originFileObj);
