@@ -1,4 +1,4 @@
-import { Card, Typography, Row, Col, Spin, Space } from "antd";
+import { Card, Typography, Row, Col, Space, Skeleton } from "antd";
 import {
   PieChart, Pie, Cell, Tooltip, BarChart, XAxis, YAxis, Bar, Legend, ResponsiveContainer, AreaChart, CartesianGrid, Area, Line,
 } from "recharts";
@@ -39,18 +39,6 @@ const DashboardPage = () => {
 
   const { isDarkMode } = useContext(ThemeContext);
   const { token } = theme.useToken();
-
-  const isLoading =
-    usersQuery.isLoading ||
-    classesQuery.isLoading ||
-    assignmentsQuery.isLoading ||
-    quizzesQuery.isLoading ||
-    logsQuery.isLoading ||
-    submissionsQuery.isLoading;
-
-  if (isLoading) {
-    return <Spin fullscreen />;
-  }
 
   const users = usersQuery.data ?? [];
   const classes = classesQuery.data ?? [];
@@ -196,15 +184,18 @@ const DashboardPage = () => {
 
         <Col xs={24} sm={12} md={6}>
           <Card title="Total Quizzes" extra={<Link to="/quizzes">View Details</Link>}>
-            <Space>
-              <ProfileOutlined style={{ fontSize: 36, color: "#eb2f96" }} />
-              <div>
-                <Title level={3} style={{ margin: 0 }}>
-                  {quizzes.length}
-                </Title>
-                <Text type="secondary">{upcomingQuizzes} upcoming</Text>
-              </div>
-            </Space>
+            <Skeleton loading={quizzesQuery.isLoading} active>
+
+              <Space>
+                <ProfileOutlined style={{ fontSize: 36, color: "#eb2f96" }} />
+                <div>
+                  <Title level={3} style={{ margin: 0 }}>
+                    {quizzes.length}
+                  </Title>
+                  <Text type="secondary">{upcomingQuizzes} upcoming</Text>
+                </div>
+              </Space>
+            </Skeleton>
           </Card>
         </Col>
       </Row>
